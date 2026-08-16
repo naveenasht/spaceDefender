@@ -7,6 +7,7 @@ import {
   GAME_WIDTH,
   LASER_AMMO_COST,
   LASER_SPEED,
+  PLAYER_START_LIVES,
   POWERUP_SLOTS,
   type PowerupType,
 } from "../config";
@@ -37,7 +38,11 @@ export class GameScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private ammoText!: Phaser.GameObjects.Text;
   private rapidFireText!: Phaser.GameObjects.Text;
-  private livesIcons: Phaser.GameObjects.Image[] = [];
+  private healthBarFill!: Phaser.GameObjects.Rectangle;
+  private healthBarFlash!: Phaser.GameObjects.Rectangle;
+  private healthBarWidth = 150;
+  private healthBarHeight = 16;
+  private lastLives = PLAYER_START_LIVES;
   private slotBoxes: Phaser.GameObjects.Rectangle[] = [];
   private slotIcons: (Phaser.GameObjects.Image | null)[] = [];
 
@@ -129,14 +134,10 @@ export class GameScene extends Phaser.Scene {
       .setDepth(20);
 
     this.rapidFireText = this.add
-      .text(16, 96, "", { fontFamily: "monospace", fontSize: "13px", color: "#ffcf5c" })
+      .text(16, 40, "", { fontFamily: "monospace", fontSize: "13px", color: "#ffcf5c" })
       .setDepth(20);
 
-    for (let i = 0; i < this.player.lives; i++) {
-      this.livesIcons.push(
-        this.add.image(20 + i * 24, 46, "player").setScale(0.5).setDepth(20).setAngle(-90)
-      );
-    }
+    this.buildHealthBar();
 
     const slotSize = 34;
     const totalWidth = POWERUP_SLOTS * (slotSize + 8) - 8;
@@ -164,13 +165,59 @@ export class GameScene extends Phaser.Scene {
     this.refreshHud();
   }
 
+  private buildHealthBar(): void {
+    const barX = GAME_WIDTH / 2 - this.healthBarWidth / 2;
+    const barY = 23;
+
+    this.add
+      .text(barX - 10, barY, "HULL", { fontFamily: "monospace", fontSize: "12px", color: "#9fb3c8" })
+      .setOrigin(1, 0.5)
+      .setDepth(20);
+
+    this.add
+      .rectangle(barX, barY, this.healthBarWidth, this.healthBarHeight, 0x0b1626, 0.85)
+      .setOrigin(0, 0.5)
+      .setStrokeStyle(2, 0x2f4b6b)
+      .setDepth(20);
+
+    this.healthBarFill = this.add
+      .rectangle(
+        barX + 2,
+        barY,
+        this.healthBarWidth - 4,
+        this.healthBarHeight - 4,
+        0x4dffa0
+      )
+      .setOrigin(0, 0.5)
+      .setDepth(21);
+
+    this.healthBarFlash = this.add
+      .rectangle(barX, barY, this.healthBarWidth, this.healthBarHeight, 0xffffff, 0)
+      .setOrigin(0, 0.5)
+      .setDepth(22);
+  }
+
   private refreshHud(): void {
     this.ammoText.setText(`AMMO: ${Math.max(0, this.player.ammo)}`);
     this.scoreText.setText(`SCORE: ${this.score}`);
 
-    for (let i = 0; i < this.livesIcons.length; i++) {
-      this.livesIcons[i].setVisible(i < this.player.lives);
+    const lives = Math.max(0, this.player.lives);
+    const fraction = lives / PLAYER_START_LIVES;
+    const innerWidth = Math.max(0, (this.healthBarWidth - 4) * fraction);
+    this.healthBarFill.setSize(innerWidth, this.healthBarHeight - 4);
+    this.healthBarFill.setFillStyle(
+      fraction > 0.66 ? 0x4dffa0 : fraction > 0.33 ? 0xffcf5c : 0xff5d5d
+    );
+
+    if (lives < this.lastLives) {
+      this.tweens.add({
+        targets: this.healthBarFlash,
+        alpha: { from: 0.85, to: 0 },
+        duration: 250,
+        ease: "Cubic.easeOut",
+      });
     }
+    this.lastLives = lives;
 
     if (this.player.isRapidFire) {
       const secondsLeft = Math.max(0, Math.ceil((this.player.rapidFireUntil - this.time.now) / 1000));
