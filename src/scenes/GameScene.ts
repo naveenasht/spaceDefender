@@ -14,7 +14,7 @@ import { Player } from "../objects/Player";
 import { Enemy, type EnemyKind } from "../objects/Enemy";
 import { Pickup, type PickupKind } from "../objects/Pickup";
 
-const RAPID_FIRE_DURATION_MS = 4000;
+const RAPID_FIRE_DURATION_MS = 6000;
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -36,6 +36,7 @@ export class GameScene extends Phaser.Scene {
 
   private scoreText!: Phaser.GameObjects.Text;
   private ammoText!: Phaser.GameObjects.Text;
+  private rapidFireText!: Phaser.GameObjects.Text;
   private livesIcons: Phaser.GameObjects.Image[] = [];
   private slotBoxes: Phaser.GameObjects.Rectangle[] = [];
   private slotIcons: (Phaser.GameObjects.Image | null)[] = [];
@@ -127,6 +128,10 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setDepth(20);
 
+    this.rapidFireText = this.add
+      .text(16, 96, "", { fontFamily: "monospace", fontSize: "13px", color: "#ffcf5c" })
+      .setDepth(20);
+
     for (let i = 0; i < this.player.lives; i++) {
       this.livesIcons.push(
         this.add.image(20 + i * 24, 46, "player").setScale(0.5).setDepth(20).setAngle(-90)
@@ -167,6 +172,13 @@ export class GameScene extends Phaser.Scene {
       this.livesIcons[i].setVisible(i < this.player.lives);
     }
 
+    if (this.player.isRapidFire) {
+      const secondsLeft = Math.max(0, Math.ceil((this.player.rapidFireUntil - this.time.now) / 1000));
+      this.rapidFireText.setText(`RAPID FIRE ${secondsLeft}s`).setVisible(true);
+    } else {
+      this.rapidFireText.setVisible(false);
+    }
+
     for (let i = 0; i < POWERUP_SLOTS; i++) {
       const type = this.player.powerups[i];
       const existing = this.slotIcons[i];
@@ -175,7 +187,8 @@ export class GameScene extends Phaser.Scene {
         this.slotIcons[i] = null;
       }
       if (type) {
-        const tex = type === "bomb" ? "bombPickup" : "shieldPickup";
+        const tex =
+          type === "bomb" ? "bombPickup" : type === "shield" ? "shieldPickup" : "rapidFireIcon";
         const box = this.slotBoxes[i];
         this.slotIcons[i] = this.add
           .image(box.x, box.y, tex)
@@ -196,6 +209,7 @@ export class GameScene extends Phaser.Scene {
     ) as Phaser.Physics.Arcade.Image;
     laser.setRotation(fired.angle);
     laser.setDepth(2);
+    if (this.player.isRapidFire) laser.setTint(0xffcf5c);
     this.physics.velocityFromRotation(fired.angle, LASER_SPEED, laser.body!.velocity);
     this.time.delayedCall(1500, () => laser.active && laser.destroy());
     void LASER_AMMO_COST;
@@ -276,7 +290,7 @@ export class GameScene extends Phaser.Scene {
         if (roll < 0.35) {
           this.player.addAmmo(AMMO_BURST_AMOUNT);
         } else if (roll < 0.6) {
-          this.player.activateRapidFire(RAPID_FIRE_DURATION_MS);
+          this.player.addPowerup("rapidFire");
         } else if (roll < 0.8) {
           this.player.addPowerup("shield");
         } else {
@@ -296,6 +310,8 @@ export class GameScene extends Phaser.Scene {
       for (const enemy of active) this.killEnemy(enemy);
     } else if (type === "shield") {
       this.player.activateShield();
+    } else if (type === "rapidFire") {
+      this.player.activateRapidFire(RAPID_FIRE_DURATION_MS);
     }
     this.refreshHud();
   }

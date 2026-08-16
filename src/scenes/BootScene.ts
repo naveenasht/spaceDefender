@@ -22,6 +22,7 @@ export class BootScene extends Phaser.Scene {
     this.makeBombPickup();
     this.makeRandomPickup();
     this.makeShieldPickup();
+    this.makeRapidFireIcon();
     this.makeShieldFx();
     this.makeStar();
     this.makeParticle();
@@ -143,6 +144,25 @@ export class BootScene extends Phaser.Scene {
     g.fillPath();
     g.strokePath();
     g.generateTexture("shieldPickup", s, s);
+    g.destroy();
+  }
+
+  private makeRapidFireIcon(): void {
+    const g = this.add.graphics();
+    const s = 26;
+    g.fillStyle(0xffcf5c, 1);
+    g.lineStyle(2, 0xfff0c9, 1);
+    g.beginPath();
+    g.moveTo(s * 0.58, 0);
+    g.lineTo(s * 0.18, s * 0.55);
+    g.lineTo(s * 0.44, s * 0.55);
+    g.lineTo(s * 0.32, s);
+    g.lineTo(s * 0.86, s * 0.4);
+    g.lineTo(s * 0.56, s * 0.4);
+    g.closePath();
+    g.fillPath();
+    g.strokePath();
+    g.generateTexture("rapidFireIcon", s, s);
     g.destroy();
   }
 
