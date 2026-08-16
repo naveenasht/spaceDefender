@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { CHARACTERS } from "../config";
 
 /**
  * Generates every sprite as a vector shape at boot time so the game
@@ -10,7 +11,9 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.makePlayer();
+    for (const character of CHARACTERS) {
+      this.makePlayer(character.texture, character.color, character.edgeColor);
+    }
     this.makeEnemy("enemy", 0xff4d4d, 0xffb3b3, 34);
     this.makeEnemy("enemyShooter", 0xff9a3d, 0xffe0b3, 38);
     this.makeEnemy("enemyExtra", 0xb84dff, 0xf0d9ff, 44);
@@ -30,12 +33,12 @@ export class BootScene extends Phaser.Scene {
     this.scene.start("Menu");
   }
 
-  private makePlayer(): void {
+  private makePlayer(key: string, fill: number, edge: number): void {
     const g = this.add.graphics();
     const w = 40;
     const h = 34;
-    g.fillStyle(0x4dc9ff, 1);
-    g.lineStyle(2, 0xe6faff, 1);
+    g.fillStyle(fill, 1);
+    g.lineStyle(2, edge, 1);
     // Nose points right (rotation 0 = facing right, matches pointer-aim math)
     g.beginPath();
     g.moveTo(w, h / 2);
@@ -47,7 +50,7 @@ export class BootScene extends Phaser.Scene {
     g.strokePath();
     g.fillStyle(0xffffff, 0.9);
     g.fillCircle(w * 0.55, h / 2, 3);
-    g.generateTexture("player", w, h);
+    g.generateTexture(key, w, h);
     g.destroy();
   }
 

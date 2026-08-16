@@ -11,11 +11,15 @@ A browser-based top-down space shooter built with [Phaser](https://phaser.io/) 4
 
 ## Gameplay
 
+- Flow: **Menu → Character Select → Level Select → Game → Game Over**. Backspace steps back a screen; arrow keys/A-D move the selection, Enter or a click confirms.
+- **Characters** trade off speed, fire rate, lives, and ammo: Interceptor (balanced), Vanguard (tankier, slower), Striker (fast and fragile). Stats are shown as bars on the select screen.
+- **Levels** (Sector Alpha/Beta/Gamma) scale enemy spawn rate and the mix of shooter/elite enemies.
 - Destroy enemies for score. Basic enemies just drop in; **shooter** enemies (orange) fire lasers back at you; **extra** enemies (purple) are tougher, worth more, and always drop a pickup on death.
 - Ammo is limited — pick up green ammo packs to refill.
-- Bomb and shield pickups go into one of your 4 power-up slots; press **F** to use the oldest one in the queue. Bomb clears all on-screen enemies; shield grants temporary invulnerability.
-- The purple "random item" pickup resolves immediately into a bonus: an ammo burst, temporary rapid fire, a shield charge, or a bomb charge.
-- You have 3 lives, with a brief invulnerability window after each hit.
+- Bomb, shield, and rapid-fire pickups go into one of your 4 power-up slots; press **F** to use the oldest one in the queue. Bomb clears all on-screen enemies; shield grants temporary invulnerability; rapid fire triples your fire rate for a few seconds.
+- The purple "random item" pickup resolves into an instant ammo burst or one of the above slot power-ups.
+- A HULL bar at the top shows remaining lives (color-coded green/amber/red), with a brief invulnerability window after each hit.
+- On Game Over, retry keeps your character/level choice, or press **M** to return to the main menu and pick again.
 
 ## Development
 
@@ -42,22 +46,24 @@ There's no backend/database — it's entirely client-side, so hosting is just "s
 
 ```
 src/
-  config.ts           tunable game constants
-  main.ts             Phaser game bootstrap
+  config.ts                  tunable constants + character/level definitions
+  main.ts                    Phaser game bootstrap
   scenes/
-    BootScene.ts       procedurally generates all textures
-    MenuScene.ts        title screen
-    GameScene.ts         core gameplay loop, spawning, collisions, HUD
-    GameOverScene.ts    score + restart
+    BootScene.ts              procedurally generates all textures
+    MenuScene.ts               title screen
+    CharacterSelectScene.ts     ship select with stat comparison
+    LevelSelectScene.ts          sector/difficulty select
+    GameScene.ts                  core gameplay loop, spawning, collisions, HUD
+    GameOverScene.ts             score + retry/menu
   objects/
-    Player.ts           movement, aiming, firing, ammo, powerups, shield
-    Enemy.ts             enemy variants (basic/shooter/extra)
-    Pickup.ts             ammo/bomb/shield/random pickups
+    Player.ts                  movement, aiming, firing, ammo, powerups, shield
+    Enemy.ts                    enemy variants (basic/shooter/extra)
+    Pickup.ts                    ammo/bomb/shield/random pickups
 ```
 
 ## Possible next steps
 
-- Multiple levels with escalating difficulty/enemy patterns (current build is a single endless wave that scales via spawn weighting).
-- Persist high scores (e.g. `localStorage`).
+- More characters/levels — both are plain data arrays in `config.ts`, so new entries just need a color and stat/weight tuning.
+- Persist high scores and best-run-per-loadout (e.g. `localStorage`).
 - Sound effects/music.
 - Mobile/touch controls.

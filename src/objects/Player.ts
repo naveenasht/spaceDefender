@@ -9,29 +9,39 @@ import {
   PLAYER_START_LIVES,
   POWERUP_SLOTS,
   SHIELD_DURATION_MS,
+  type CharacterDef,
   type PowerupType,
 } from "../config";
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
-  ammo = PLAYER_START_AMMO;
-  lives = PLAYER_START_LIVES;
+  ammo: number;
+  lives: number;
+  maxLives: number;
   powerups: PowerupType[] = [];
   rapidFireUntil = 0;
 
+  private moveSpeed: number;
+  private fireCooldownMs: number;
   private lastFiredAt = 0;
   private invulnUntil = 0;
   private shieldUntil = 0;
   private shieldFx: Phaser.GameObjects.Image;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, "player");
+  constructor(scene: Phaser.Scene, x: number, y: number, character: CharacterDef) {
+    super(scene, x, y, character.texture);
     scene.add.existing(this);
     scene.physics.add.existing(this);
+
+    this.moveSpeed = PLAYER_SPEED * character.speedMult;
+    this.fireCooldownMs = PLAYER_FIRE_COOLDOWN_MS * character.fireCooldownMult;
+    this.maxLives = Math.max(1, PLAYER_START_LIVES + character.livesDelta);
+    this.lives = this.maxLives;
+    this.ammo = Math.round(PLAYER_START_AMMO * character.ammoMult);
 
     this.setCollideWorldBounds(true);
     this.setDamping(true);
     this.setDrag(0.85);
-    this.setMaxVelocity(PLAYER_SPEED);
+    this.setMaxVelocity(this.moveSpeed);
     (this.body as Phaser.Physics.Arcade.Body).setSize(this.width * 0.7, this.height * 0.7);
 
     this.shieldFx = scene.add.image(x, y, "shieldFx").setVisible(false).setDepth(5);
@@ -59,7 +69,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (pressed.down) vy += 1;
 
     const len = Math.hypot(vx, vy) || 1;
-    body.setVelocity((vx / len) * PLAYER_SPEED, (vy / len) * PLAYER_SPEED);
+    body.setVelocity((vx / len) * this.moveSpeed, (vy / len) * this.moveSpeed);
   }
 
   aimAt(pointerX: number, pointerY: number): void {
@@ -67,7 +77,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   tryFire(time: number): { angle: number } | null {
-    const cooldown = this.isRapidFire ? PLAYER_FIRE_COOLDOWN_MS * 0.35 : PLAYER_FIRE_COOLDOWN_MS;
+    const cooldown = this.isRapidFire ? this.fireCooldownMs * 0.35 : this.fireCooldownMs;
     if (time < this.lastFiredAt + cooldown) return null;
     if (this.ammo <= 0) return null;
     this.lastFiredAt = time;

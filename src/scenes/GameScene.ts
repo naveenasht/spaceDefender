@@ -2,13 +2,16 @@ import Phaser from "phaser";
 import {
   AMMO_BURST_AMOUNT,
   AMMO_PACK_AMOUNT,
+  CHARACTERS,
   ENEMY_LASER_SPEED,
   GAME_HEIGHT,
   GAME_WIDTH,
   LASER_AMMO_COST,
   LASER_SPEED,
-  PLAYER_START_LIVES,
+  LEVELS,
   POWERUP_SLOTS,
+  type CharacterDef,
+  type LevelDef,
   type PowerupType,
 } from "../config";
 import { Player } from "../objects/Player";
@@ -17,8 +20,15 @@ import { Pickup, type PickupKind } from "../objects/Pickup";
 
 const RAPID_FIRE_DURATION_MS = 6000;
 
+interface GameSceneData {
+  characterId?: string;
+  levelId?: string;
+}
+
 export class GameScene extends Phaser.Scene {
   private player!: Player;
+  private character!: CharacterDef;
+  private level!: LevelDef;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private keyF!: Phaser.Input.Keyboard.Key;
@@ -42,7 +52,7 @@ export class GameScene extends Phaser.Scene {
   private healthBarFlash!: Phaser.GameObjects.Rectangle;
   private healthBarWidth = 150;
   private healthBarHeight = 16;
-  private lastLives = PLAYER_START_LIVES;
+  private lastLives = 0;
   private slotBoxes: Phaser.GameObjects.Rectangle[] = [];
   private slotIcons: (Phaser.GameObjects.Image | null)[] = [];
 
@@ -50,7 +60,10 @@ export class GameScene extends Phaser.Scene {
     super("Game");
   }
 
-  create(): void {
+  create(data: GameSceneData): void {
+    this.character = CHARACTERS.find((c) => c.id === data.characterId) ?? CHARACTERS[0];
+    this.level = LEVELS.find((l) => l.id === data.levelId) ?? LEVELS[0];
+
     this.score = 0;
     this.elapsedMs = 0;
     this.gameOver = false;
@@ -62,7 +75,7 @@ export class GameScene extends Phaser.Scene {
     this.enemyLasers = this.physics.add.group();
     this.pickups = this.physics.add.group({ classType: Pickup, runChildUpdate: false });
 
-    this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT - 80);
+    this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT - 80, this.character);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = {
@@ -74,8 +87,8 @@ export class GameScene extends Phaser.Scene {
     this.keyF = this.input.keyboard!.addKey("F");
     this.keySpace = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
-    this.time.addEvent({ delay: 900, loop: true, callback: () => this.spawnEnemy() });
-    this.time.addEvent({ delay: 4200, loop: true, callback: () => this.spawnPickup() });
+    this.time.addEvent({ delay: this.level.enemySpawnMs, loop: true, callback: () => this.spawnEnemy() });
+    this.time.addEvent({ delay: this.level.pickupSpawnMs, loop: true, callback: () => this.spawnPickup() });
 
     this.setupCollisions();
     this.buildHud();
@@ -202,7 +215,7 @@ export class GameScene extends Phaser.Scene {
     this.scoreText.setText(`SCORE: ${this.score}`);
 
     const lives = Math.max(0, this.player.lives);
-    const fraction = lives / PLAYER_START_LIVES;
+    const fraction = lives / this.player.maxLives;
     const innerWidth = Math.max(0, (this.healthBarWidth - 4) * fraction);
     this.healthBarFill.setSize(innerWidth, this.healthBarHeight - 4);
     this.healthBarFill.setFillStyle(
@@ -262,12 +275,17 @@ export class GameScene extends Phaser.Scene {
     void LASER_AMMO_COST;
   }
 
+  private pickEnemyKind(): EnemyKind {
+    const roll = Math.random();
+    const w = this.level.weights;
+    if (roll < w.extra) return "extra";
+    if (roll < w.extra + w.shooter) return "shooter";
+    return "enemy";
+  }
+
   private spawnEnemy(): void {
     if (this.gameOver) return;
-    const roll = Math.random();
-    let kind: EnemyKind = "enemy";
-    if (roll > 0.9) kind = "extra";
-    else if (roll > 0.65) kind = "shooter";
+    const kind = this.pickEnemyKind();
 
     const margin = 30;
     const x = Phaser.Math.Between(margin, GAME_WIDTH - margin);
@@ -368,7 +386,11 @@ export class GameScene extends Phaser.Scene {
     if (this.player.lives <= 0 && !this.gameOver) {
       this.gameOver = true;
       this.time.delayedCall(400, () => {
-        this.scene.start("GameOver", { score: this.score });
+        this.scene.start("GameOver", {
+          score: this.score,
+          characterId: this.character.id,
+          levelId: this.level.id,
+        });
       });
     }
   }
