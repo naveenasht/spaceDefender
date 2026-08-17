@@ -10,6 +10,7 @@ import {
   POWERUP_SLOTS,
   SHIELD_DURATION_MS,
   type CharacterDef,
+  type LaserDef,
   type PowerupType,
 } from "../config";
 
@@ -17,6 +18,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   ammo: number;
   lives: number;
   maxLives: number;
+  laser: LaserDef;
   powerups: PowerupType[] = [];
   rapidFireUntil = 0;
 
@@ -27,13 +29,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private shieldUntil = 0;
   private shieldFx: Phaser.GameObjects.Image;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, character: CharacterDef) {
+  constructor(scene: Phaser.Scene, x: number, y: number, character: CharacterDef, laser: LaserDef) {
     super(scene, x, y, character.texture);
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
+    this.laser = laser;
     this.moveSpeed = PLAYER_SPEED * character.speedMult;
-    this.fireCooldownMs = PLAYER_FIRE_COOLDOWN_MS * character.fireCooldownMult;
+    this.fireCooldownMs = PLAYER_FIRE_COOLDOWN_MS * character.fireCooldownMult * laser.fireCooldownMult;
     this.maxLives = Math.max(1, PLAYER_START_LIVES + character.livesDelta);
     this.lives = this.maxLives;
     this.ammo = Math.round(PLAYER_START_AMMO * character.ammoMult);
@@ -79,9 +82,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   tryFire(time: number): { angle: number } | null {
     const cooldown = this.isRapidFire ? this.fireCooldownMs * 0.35 : this.fireCooldownMs;
     if (time < this.lastFiredAt + cooldown) return null;
-    if (this.ammo <= 0) return null;
+    if (this.ammo < this.laser.ammoCost) return null;
     this.lastFiredAt = time;
-    this.ammo -= 1;
+    this.ammo -= this.laser.ammoCost;
     return { angle: this.rotation };
   }
 

@@ -3,6 +3,7 @@ import { GAME_HEIGHT, GAME_WIDTH } from "./config";
 import { BootScene } from "./scenes/BootScene";
 import { MenuScene } from "./scenes/MenuScene";
 import { CharacterSelectScene } from "./scenes/CharacterSelectScene";
+import { LaserSelectScene } from "./scenes/LaserSelectScene";
 import { LevelSelectScene } from "./scenes/LevelSelectScene";
 import { GameScene } from "./scenes/GameScene";
 import { GameOverScene } from "./scenes/GameOverScene";
@@ -21,5 +22,13 @@ new Phaser.Game({
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, MenuScene, CharacterSelectScene, LevelSelectScene, GameScene, GameOverScene],
+  scene: [
+    BootScene,
+    MenuScene,
+    CharacterSelectScene,
+    LaserSelectScene,
+    LevelSelectScene,
+    GameScene,
+    GameOverScene,
+  ],
 });

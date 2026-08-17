@@ -1,8 +1,8 @@
 import Phaser from "phaser";
-import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH, PLAYER_START_LIVES, type CharacterDef } from "../config";
+import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH, LASERS, type LaserDef } from "../config";
 
 const CARD_WIDTH = 200;
-const CARD_HEIGHT = 340;
+const CARD_HEIGHT = 320;
 const CARD_GAP = 30;
 const CARD_TOP = 150;
 
@@ -11,20 +11,25 @@ interface StatRow {
   fraction: number;
 }
 
+interface LaserSelectData {
+  characterId?: string;
+}
+
 function normalize(value: number, min: number, max: number): number {
   return Phaser.Math.Clamp((value - min) / (max - min), 0, 1);
 }
 
-function statsFor(character: CharacterDef): StatRow[] {
+function statsFor(laser: LaserDef): StatRow[] {
   return [
-    { label: "SPEED", fraction: normalize(character.speedMult, 0.75, 1.3) },
-    { label: "RATE", fraction: 1 - normalize(character.fireCooldownMult, 0.65, 1.35) },
-    { label: "HULL", fraction: normalize(character.livesDelta, -1, 1) },
-    { label: "AMMO", fraction: normalize(character.ammoMult, 0.75, 1.25) },
+    { label: "POWER", fraction: normalize(laser.spreadCount, 1, 3) },
+    { label: "PIERCE", fraction: normalize(laser.pierceCount, 1, 3) },
+    { label: "RATE", fraction: 1 - normalize(laser.fireCooldownMult, 0.65, 1.35) },
+    { label: "AMMO/SHOT", fraction: 1 - normalize(laser.ammoCost, 1, 2) },
   ];
 }
 
-export class CharacterSelectScene extends Phaser.Scene {
+export class LaserSelectScene extends Phaser.Scene {
+  private characterId!: string;
   private selectedIndex = 0;
   private panels: Phaser.GameObjects.Rectangle[] = [];
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -34,10 +39,11 @@ export class CharacterSelectScene extends Phaser.Scene {
   private keyBackspace!: Phaser.Input.Keyboard.Key;
 
   constructor() {
-    super("CharacterSelect");
+    super("LaserSelect");
   }
 
-  create(): void {
+  create(data: LaserSelectData): void {
+    this.characterId = data.characterId ?? CHARACTERS[0].id;
     this.selectedIndex = 0;
     this.panels = [];
     this.cameras.main.setBackgroundColor(0x05070d);
@@ -50,7 +56,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     }
 
     this.add
-      .text(GAME_WIDTH / 2, 60, "SELECT YOUR SHIP", {
+      .text(GAME_WIDTH / 2, 60, "SELECT YOUR LASER", {
         fontFamily: "monospace",
         fontSize: "32px",
         color: "#7cf7ff",
@@ -58,12 +64,21 @@ export class CharacterSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const totalWidth = CHARACTERS.length * CARD_WIDTH + (CHARACTERS.length - 1) * CARD_GAP;
+    const character = CHARACTERS.find((c) => c.id === this.characterId) ?? CHARACTERS[0];
+    this.add
+      .text(GAME_WIDTH / 2, 98, `FLYING: ${character.name.toUpperCase()}`, {
+        fontFamily: "monospace",
+        fontSize: "13px",
+        color: "#9fb3c8",
+      })
+      .setOrigin(0.5);
+
+    const totalWidth = LASERS.length * CARD_WIDTH + (LASERS.length - 1) * CARD_GAP;
     const startX = GAME_WIDTH / 2 - totalWidth / 2;
 
-    CHARACTERS.forEach((character, i) => {
+    LASERS.forEach((laser, i) => {
       const cx = startX + i * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2;
-      this.buildCard(character, i, cx);
+      this.buildCard(laser, i, cx);
     });
 
     this.add
@@ -85,12 +100,12 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     this.keySpace.on("down", () => this.confirm());
     this.keyEnter.on("down", () => this.confirm());
-    this.keyBackspace.on("down", () => this.scene.start("Menu"));
+    this.keyBackspace.on("down", () => this.scene.start("CharacterSelect"));
 
     this.highlight();
   }
 
-  private buildCard(character: CharacterDef, index: number, cx: number): void {
+  private buildCard(laser: LaserDef, index: number, cx: number): void {
     const cy = CARD_TOP + CARD_HEIGHT / 2;
 
     const panel = this.add
@@ -109,24 +124,29 @@ export class CharacterSelectScene extends Phaser.Scene {
       this.confirm();
     });
 
-    this.add
-      .image(cx, CARD_TOP + 55, character.texture)
-      .setScale(1.7)
-      .setAngle(-90)
-      .setDepth(2);
+    const boltY = CARD_TOP + 50;
+    const count = laser.spreadCount;
+    for (let b = 0; b < count; b++) {
+      const offsetDeg = count === 1 ? 0 : -laser.spreadAngleDeg * ((count - 1) / 2) + laser.spreadAngleDeg * b;
+      this.add
+        .image(cx + offsetDeg * 1.6, boltY, laser.texture)
+        .setScale(1.6)
+        .setAngle(-90 + offsetDeg)
+        .setDepth(2);
+    }
 
     this.add
-      .text(cx, CARD_TOP + 108, character.name.toUpperCase(), {
+      .text(cx, CARD_TOP + 92, laser.name.toUpperCase(), {
         fontFamily: "monospace",
-        fontSize: "16px",
-        color: Phaser.Display.Color.IntegerToColor(character.color).rgba,
+        fontSize: "15px",
+        color: Phaser.Display.Color.IntegerToColor(laser.color).rgba,
         fontStyle: "bold",
       })
       .setOrigin(0.5)
       .setDepth(2);
 
     this.add
-      .text(cx, CARD_TOP + 132, character.tagline, {
+      .text(cx, CARD_TOP + 114, laser.tagline, {
         fontFamily: "monospace",
         fontSize: "11px",
         color: "#9fb3c8",
@@ -136,52 +156,40 @@ export class CharacterSelectScene extends Phaser.Scene {
       .setOrigin(0.5, 0)
       .setDepth(2);
 
-    const statStartY = CARD_TOP + 190;
+    const statStartY = CARD_TOP + 172;
     const rowHeight = 30;
     const barWidth = 110;
-    const barX = cx - CARD_WIDTH / 2 + 60;
+    const barX = cx - CARD_WIDTH / 2 + 70;
 
-    statsFor(character).forEach((stat, row) => {
+    statsFor(laser).forEach((stat, row) => {
       const y = statStartY + row * rowHeight;
       this.add
         .text(cx - CARD_WIDTH / 2 + 16, y, stat.label, {
           fontFamily: "monospace",
-          fontSize: "11px",
+          fontSize: "10px",
           color: "#6f88a3",
         })
         .setOrigin(0, 0.5)
         .setDepth(2);
 
       this.add
-        .rectangle(barX, y, barWidth, 8, 0x081018, 1)
+        .rectangle(barX, y, barWidth - 12, 8, 0x081018, 1)
         .setOrigin(0, 0.5)
         .setStrokeStyle(1, 0x2f4b6b)
         .setDepth(2);
 
       this.add
-        .rectangle(barX + 1, y, Math.max(2, (barWidth - 2) * stat.fraction), 6, character.color, 1)
+        .rectangle(barX + 1, y, Math.max(2, (barWidth - 14) * stat.fraction), 6, laser.color, 1)
         .setOrigin(0, 0.5)
         .setDepth(3);
     });
-
-    if (character.livesDelta !== 0) {
-      const sign = character.livesDelta > 0 ? "+" : "";
-      this.add
-        .text(cx, CARD_TOP + CARD_HEIGHT - 20, `${sign}${character.livesDelta} LIFE  (${PLAYER_START_LIVES + character.livesDelta} TOTAL)`, {
-          fontFamily: "monospace",
-          fontSize: "10px",
-          color: character.livesDelta > 0 ? "#4dffa0" : "#ff5d5d",
-        })
-        .setOrigin(0.5)
-        .setDepth(2);
-    }
   }
 
   private highlight(): void {
     this.panels.forEach((panel, i) => {
-      const character = CHARACTERS[i];
+      const laser = LASERS[i];
       if (i === this.selectedIndex) {
-        panel.setStrokeStyle(3, character.color);
+        panel.setStrokeStyle(3, laser.color);
         panel.setFillStyle(0x0f1e33, 0.95);
         this.tweens.add({ targets: panel, scale: 1.04, duration: 120, ease: "Cubic.easeOut" });
       } else {
@@ -193,18 +201,18 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   private confirm(): void {
-    const character = CHARACTERS[this.selectedIndex];
-    this.scene.start("LaserSelect", { characterId: character.id });
+    const laser = LASERS[this.selectedIndex];
+    this.scene.start("LevelSelect", { characterId: this.characterId, laserId: laser.id });
   }
 
   update(): void {
     const left = Phaser.Input.Keyboard.JustDown(this.cursors.left!) || Phaser.Input.Keyboard.JustDown(this.wasd.A);
     const right = Phaser.Input.Keyboard.JustDown(this.cursors.right!) || Phaser.Input.Keyboard.JustDown(this.wasd.D);
     if (left) {
-      this.selectedIndex = (this.selectedIndex - 1 + CHARACTERS.length) % CHARACTERS.length;
+      this.selectedIndex = (this.selectedIndex - 1 + LASERS.length) % LASERS.length;
       this.highlight();
     } else if (right) {
-      this.selectedIndex = (this.selectedIndex + 1) % CHARACTERS.length;
+      this.selectedIndex = (this.selectedIndex + 1) % LASERS.length;
       this.highlight();
     }
   }

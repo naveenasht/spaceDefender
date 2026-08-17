@@ -7,7 +7,6 @@ export const PLAYER_START_AMMO = 100;
 export const PLAYER_INVULN_MS = 1500;
 
 export const LASER_SPEED = 650;
-export const LASER_AMMO_COST = 1;
 export const PLAYER_FIRE_COOLDOWN_MS = 180;
 
 export const ENEMY_LASER_SPEED = 380;
@@ -77,6 +76,62 @@ export const CHARACTERS: CharacterDef[] = [
     fireCooldownMult: 0.7,
     livesDelta: -1,
     ammoMult: 0.8,
+  },
+];
+
+export interface LaserDef {
+  id: string;
+  name: string;
+  tagline: string;
+  texture: string;
+  color: number;
+  edgeColor: number;
+  ammoCost: number;
+  pierceCount: number;
+  spreadCount: number;
+  spreadAngleDeg: number;
+  fireCooldownMult: number;
+}
+
+export const LASERS: LaserDef[] = [
+  {
+    id: "pulse",
+    name: "Pulse Laser",
+    tagline: "Reliable single shot",
+    texture: "playerLaser",
+    color: 0x7cf7ff,
+    edgeColor: 0xffffff,
+    ammoCost: 1,
+    pierceCount: 1,
+    spreadCount: 1,
+    spreadAngleDeg: 0,
+    fireCooldownMult: 1,
+  },
+  {
+    id: "spread",
+    name: "Spread Laser",
+    tagline: "3-way volley, great vs crowds",
+    texture: "laserSpread",
+    color: 0xffcf5c,
+    edgeColor: 0xfff0c9,
+    ammoCost: 2,
+    pierceCount: 1,
+    spreadCount: 3,
+    spreadAngleDeg: 16,
+    fireCooldownMult: 1,
+  },
+  {
+    id: "piercing",
+    name: "Piercing Laser",
+    tagline: "Punches through 3 targets",
+    texture: "laserPierce",
+    color: 0xb84dff,
+    edgeColor: 0xf0d9ff,
+    ammoCost: 1,
+    pierceCount: 3,
+    spreadCount: 1,
+    spreadAngleDeg: 0,
+    fireCooldownMult: 1.35,
   },
 ];
 

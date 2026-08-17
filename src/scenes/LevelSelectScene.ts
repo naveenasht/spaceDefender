@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH, LEVELS, type LevelDef } from "../config";
+import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH, LASERS, LEVELS, type LevelDef } from "../config";
 
 const CARD_WIDTH = 200;
 const CARD_HEIGHT = 300;
@@ -14,10 +14,12 @@ const DIFFICULTY_COLOR: Record<number, number> = {
 
 interface LevelSelectData {
   characterId?: string;
+  laserId?: string;
 }
 
 export class LevelSelectScene extends Phaser.Scene {
   private characterId!: string;
+  private laserId!: string;
   private selectedIndex = 0;
   private panels: Phaser.GameObjects.Rectangle[] = [];
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -32,6 +34,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
   create(data: LevelSelectData): void {
     this.characterId = data.characterId ?? CHARACTERS[0].id;
+    this.laserId = data.laserId ?? LASERS[0].id;
     this.selectedIndex = 0;
     this.panels = [];
     this.cameras.main.setBackgroundColor(0x05070d);
@@ -53,8 +56,9 @@ export class LevelSelectScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const character = CHARACTERS.find((c) => c.id === this.characterId) ?? CHARACTERS[0];
+    const laser = LASERS.find((l) => l.id === this.laserId) ?? LASERS[0];
     this.add
-      .text(GAME_WIDTH / 2, 98, `FLYING: ${character.name.toUpperCase()}`, {
+      .text(GAME_WIDTH / 2, 98, `FLYING: ${character.name.toUpperCase()}   //   ${laser.name.toUpperCase()}`, {
         fontFamily: "monospace",
         fontSize: "13px",
         color: "#9fb3c8",
@@ -88,7 +92,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
     this.keySpace.on("down", () => this.confirm());
     this.keyEnter.on("down", () => this.confirm());
-    this.keyBackspace.on("down", () => this.scene.start("CharacterSelect"));
+    this.keyBackspace.on("down", () => this.scene.start("LaserSelect", { characterId: this.characterId }));
 
     this.highlight();
   }
@@ -198,7 +202,11 @@ export class LevelSelectScene extends Phaser.Scene {
 
   private confirm(): void {
     const level = LEVELS[this.selectedIndex];
-    this.scene.start("Game", { characterId: this.characterId, levelId: level.id });
+    this.scene.start("Game", {
+      characterId: this.characterId,
+      laserId: this.laserId,
+      levelId: level.id,
+    });
   }
 
   update(): void {

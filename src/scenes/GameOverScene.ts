@@ -4,6 +4,7 @@ import { GAME_HEIGHT, GAME_WIDTH } from "../config";
 interface GameOverData {
   score?: number;
   characterId?: string;
+  laserId?: string;
   levelId?: string;
 }
 
@@ -51,7 +52,11 @@ export class GameOverScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const retry = () =>
-      this.scene.start("Game", { characterId: data.characterId, levelId: data.levelId });
+      this.scene.start("Game", {
+        characterId: data.characterId,
+        laserId: data.laserId,
+        levelId: data.levelId,
+      });
 
     this.input.keyboard!.once("keydown-SPACE", retry);
     this.input.once("pointerdown", retry);

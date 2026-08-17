@@ -11,8 +11,9 @@ A browser-based top-down space shooter built with [Phaser](https://phaser.io/) 4
 
 ## Gameplay
 
-- Flow: **Menu → Character Select → Level Select → Game → Game Over**. Backspace steps back a screen; arrow keys/A-D move the selection, Enter or a click confirms.
+- Flow: **Menu → Character Select → Laser Select → Level Select → Game → Game Over**. Backspace steps back a screen; arrow keys/A-D move the selection, Enter or a click confirms.
 - **Characters** trade off speed, fire rate, lives, and ammo: Interceptor (balanced), Vanguard (tankier, slower), Striker (fast and fragile). Stats are shown as bars on the select screen.
+- **Lasers** trade off ammo cost, bolt count, and pierce: Pulse (cheap single shot), Spread (3-way fan, 2 ammo/shot, great vs crowds), Piercing (punches through 3 targets, slightly slower fire rate).
 - **Levels** (Sector Alpha/Beta/Gamma) scale enemy spawn rate and the mix of shooter/elite enemies.
 - Destroy enemies for score. Basic enemies just drop in; **shooter** enemies (orange) fire lasers back at you; **extra** enemies (purple) are tougher, worth more, and always drop a pickup on death.
 - Ammo is limited — pick up green ammo packs to refill.
@@ -53,7 +54,8 @@ src/
     BootScene.ts              procedurally generates all textures
     MenuScene.ts               title screen
     CharacterSelectScene.ts     ship select with stat comparison
-    LevelSelectScene.ts          sector/difficulty select
+    LaserSelectScene.ts          weapon select with stat comparison
+    LevelSelectScene.ts           sector/difficulty select
     GameScene.ts                  core gameplay loop, spawning, collisions, HUD
     GameOverScene.ts             score + retry/menu
   objects/

@@ -7,12 +7,13 @@ import {
   ENEMY_LASER_SPEED,
   GAME_HEIGHT,
   GAME_WIDTH,
-  LASER_AMMO_COST,
   LASER_SPEED,
+  LASERS,
   LEVELS,
   POWERUP_SLOTS,
   SCORE,
   type CharacterDef,
+  type LaserDef,
   type LevelDef,
   type PowerupType,
 } from "../config";
@@ -28,12 +29,14 @@ const RAPID_FIRE_DURATION_MS = 6000;
 
 interface GameSceneData {
   characterId?: string;
+  laserId?: string;
   levelId?: string;
 }
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
   private character!: CharacterDef;
+  private laser!: LaserDef;
   private level!: LevelDef;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
@@ -82,6 +85,7 @@ export class GameScene extends Phaser.Scene {
 
   create(data: GameSceneData): void {
     this.character = CHARACTERS.find((c) => c.id === data.characterId) ?? CHARACTERS[0];
+    this.laser = LASERS.find((l) => l.id === data.laserId) ?? LASERS[0];
     this.level = LEVELS.find((l) => l.id === data.levelId) ?? LEVELS[0];
 
     this.score = 0;
@@ -101,7 +105,7 @@ export class GameScene extends Phaser.Scene {
     this.enemyLasers = this.physics.add.group();
     this.pickups = this.physics.add.group({ classType: Pickup, runChildUpdate: false });
 
-    this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT - 80, this.character);
+    this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT - 80, this.character, this.laser);
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = {
@@ -139,11 +143,29 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Registers a laser-target hit against the laser's remaining pierce budget.
+   * Returns false if this laser already hit that exact target (guards against
+   * re-triggering on the same target across several overlapping frames), or
+   * if the laser is already spent. Destroys the laser once pierce runs out.
+   */
+  private registerLaserHit(laser: Phaser.Physics.Arcade.Image, target: object): boolean {
+    if (!laser.active) return false;
+    const hitSet = laser.getData("hitSet") as Set<object>;
+    if (hitSet.has(target)) return false;
+    hitSet.add(target);
+
+    const pierceLeft = (laser.getData("pierceLeft") as number) - 1;
+    laser.setData("pierceLeft", pierceLeft);
+    if (pierceLeft <= 0) laser.destroy();
+    return true;
+  }
+
   private setupCollisions(): void {
     this.physics.add.overlap(this.playerLasers, this.enemies, (laserObj, enemyObj) => {
       const laser = laserObj as Phaser.Physics.Arcade.Image;
       const enemy = enemyObj as Enemy;
-      laser.destroy();
+      if (!this.registerLaserHit(laser, enemy)) return;
       const died = enemy.applyDamage(1);
       if (died) this.killEnemy(enemy);
     });
@@ -370,18 +392,28 @@ export class GameScene extends Phaser.Scene {
   private fireLaser(): void {
     const fired = this.player.tryFire(this.time.now);
     if (!fired) return;
+    const laserDef = this.player.laser;
     const offset = 22;
-    const laser = this.playerLasers.create(
-      this.player.x + Math.cos(fired.angle) * offset,
-      this.player.y + Math.sin(fired.angle) * offset,
-      "playerLaser"
-    ) as Phaser.Physics.Arcade.Image;
-    laser.setRotation(fired.angle);
-    laser.setDepth(2);
-    if (this.player.isRapidFire) laser.setTint(0xffcf5c);
-    this.physics.velocityFromRotation(fired.angle, LASER_SPEED, laser.body!.velocity);
-    this.time.delayedCall(1500, () => laser.active && laser.destroy());
-    void LASER_AMMO_COST;
+    const count = laserDef.spreadCount;
+
+    for (let i = 0; i < count; i++) {
+      const offsetDeg =
+        count === 1 ? 0 : -laserDef.spreadAngleDeg * ((count - 1) / 2) + laserDef.spreadAngleDeg * i;
+      const angle = fired.angle + Phaser.Math.DegToRad(offsetDeg);
+
+      const laser = this.playerLasers.create(
+        this.player.x + Math.cos(angle) * offset,
+        this.player.y + Math.sin(angle) * offset,
+        laserDef.texture
+      ) as Phaser.Physics.Arcade.Image;
+      laser.setRotation(angle);
+      laser.setDepth(2);
+      laser.setData("pierceLeft", laserDef.pierceCount);
+      laser.setData("hitSet", new Set());
+      if (this.player.isRapidFire) laser.setTint(0xffcf5c);
+      this.physics.velocityFromRotation(angle, LASER_SPEED, laser.body!.velocity);
+      this.time.delayedCall(1500, () => laser.active && laser.destroy());
+    }
   }
 
   private pickEnemyKind(): EnemyKind {
@@ -439,7 +471,7 @@ export class GameScene extends Phaser.Scene {
         (laserObj, bossObj) => {
           const laser = laserObj as Phaser.Physics.Arcade.Image;
           const boss = bossObj as Boss;
-          laser.destroy();
+          if (!this.registerLaserHit(laser, boss)) return;
           const died = boss.applyDamage(1);
           this.refreshHud();
           if (died) this.killBoss();
@@ -593,6 +625,7 @@ export class GameScene extends Phaser.Scene {
         this.scene.start("GameOver", {
           score: this.score,
           characterId: this.character.id,
+          laserId: this.laser.id,
           levelId: this.level.id,
         });
       });
