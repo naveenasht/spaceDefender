@@ -23,7 +23,10 @@ export const SCORE = {
   enemy: 10,
   shooter: 25,
   extra: 60,
+  boss: 400,
 } as const;
+
+export const BOSS_LASER_SPEED = 340;
 
 export interface CharacterDef {
   id: string;
@@ -91,6 +94,10 @@ export interface LevelDef {
   enemySpawnMs: number;
   pickupSpawnMs: number;
   weights: EnemyWeights;
+  bossName: string;
+  bossScoreThreshold: number;
+  bossHp: number;
+  bossFireCooldownMs: number;
 }
 
 export const LEVELS: LevelDef[] = [
@@ -102,6 +109,10 @@ export const LEVELS: LevelDef[] = [
     enemySpawnMs: 1100,
     pickupSpawnMs: 3800,
     weights: { enemy: 0.75, shooter: 0.2, extra: 0.05 },
+    bossName: "Outpost Warden",
+    bossScoreThreshold: 300,
+    bossHp: 50,
+    bossFireCooldownMs: 2000,
   },
   {
     id: "beta",
@@ -111,6 +122,10 @@ export const LEVELS: LevelDef[] = [
     enemySpawnMs: 850,
     pickupSpawnMs: 4200,
     weights: { enemy: 0.6, shooter: 0.3, extra: 0.1 },
+    bossName: "Void Marauder",
+    bossScoreThreshold: 260,
+    bossHp: 70,
+    bossFireCooldownMs: 1650,
   },
   {
     id: "gamma",
@@ -120,5 +135,9 @@ export const LEVELS: LevelDef[] = [
     enemySpawnMs: 650,
     pickupSpawnMs: 4600,
     weights: { enemy: 0.45, shooter: 0.35, extra: 0.2 },
+    bossName: "Swarm Sovereign",
+    bossScoreThreshold: 220,
+    bossHp: 95,
+    bossFireCooldownMs: 1300,
   },
 ];

@@ -20,6 +20,8 @@ export class BootScene extends Phaser.Scene {
 
     this.makeLaser("playerLaser", 0x7cf7ff, 0xffffff, 18, 4);
     this.makeLaser("enemyLaser", 0xff5d5d, 0xffd6d6, 14, 4);
+    this.makeLaser("bossLaser", 0xff4dc4, 0xffd6f5, 20, 5);
+    this.makeBoss();
 
     this.makeAmmoPickup();
     this.makeBombPickup();
@@ -67,6 +69,38 @@ export class BootScene extends Phaser.Scene {
     g.fillPath();
     g.strokePath();
     g.generateTexture(key, size, size);
+    g.destroy();
+  }
+
+  private makeBoss(): void {
+    const g = this.add.graphics();
+    const w = 110;
+    const h = 80;
+    g.fillStyle(0x7a1740, 1);
+    g.lineStyle(3, 0xff6fd8, 1);
+    // Wide hull tapering to a nose pointing down, toward the player
+    g.beginPath();
+    g.moveTo(w * 0.5, h);
+    g.lineTo(w * 0.14, h * 0.55);
+    g.lineTo(0, h * 0.12);
+    g.lineTo(w * 0.32, 0);
+    g.lineTo(w * 0.68, 0);
+    g.lineTo(w, h * 0.12);
+    g.lineTo(w * 0.86, h * 0.55);
+    g.closePath();
+    g.fillPath();
+    g.strokePath();
+
+    g.fillStyle(0xffb8ec, 0.9);
+    g.fillCircle(w * 0.5, h * 0.42, 14);
+    g.fillStyle(0xffe9fb, 1);
+    g.fillCircle(w * 0.5, h * 0.42, 6);
+
+    g.fillStyle(0xff6fd8, 1);
+    g.fillCircle(w * 0.28, h * 0.26, 4);
+    g.fillCircle(w * 0.72, h * 0.26, 4);
+
+    g.generateTexture("boss", w, h);
     g.destroy();
   }
 
