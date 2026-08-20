@@ -64,6 +64,7 @@ export class GameScene extends Phaser.Scene {
   private lastLives = 0;
   private slotBoxes: Phaser.GameObjects.Rectangle[] = [];
   private slotIcons: (Phaser.GameObjects.Image | null)[] = [];
+  private slotTypes: (PowerupType | undefined)[] = [];
 
   private enemySpawnTimer!: Phaser.Time.TimerEvent;
   private pickupSpawnTimer!: Phaser.Time.TimerEvent;
@@ -97,6 +98,15 @@ export class GameScene extends Phaser.Scene {
     this.bossThreshold = this.level.bossScoreThreshold;
     this.bossLaserOverlap = undefined;
     this.bossPlayerOverlap = undefined;
+
+    // Phaser reuses this Scene instance across scene.start("Game", ...) calls
+    // (every retry), but these plain-array fields are only initialized once
+    // at construction — reset them here or they silently accumulate stale,
+    // already-destroyed references across sessions.
+    this.stars = [];
+    this.slotBoxes = [];
+    this.slotIcons = [];
+    this.slotTypes = [];
 
     this.createStarfield();
 
@@ -230,6 +240,7 @@ export class GameScene extends Phaser.Scene {
         .setDepth(20);
       this.slotBoxes.push(box);
       this.slotIcons.push(null);
+      this.slotTypes.push(undefined);
     }
 
     this.refreshHud();
@@ -329,6 +340,8 @@ export class GameScene extends Phaser.Scene {
 
     for (let i = 0; i < POWERUP_SLOTS; i++) {
       const type = this.player.powerups[i];
+      if (type === this.slotTypes[i]) continue; // unchanged — skip the churn
+
       const existing = this.slotIcons[i];
       if (existing) {
         existing.destroy();
@@ -343,6 +356,7 @@ export class GameScene extends Phaser.Scene {
           .setScale(0.8)
           .setDepth(21);
       }
+      this.slotTypes[i] = type;
     }
 
     if (this.boss) {
