@@ -86,7 +86,16 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.keySpace.on("down", () => this.confirm());
     this.keyEnter.on("down", () => this.confirm());
     this.keyBackspace.on("down", () => this.scene.start("Menu"));
+    this.cursors.left!.on("down", () => this.moveSelection(-1));
+    this.cursors.right!.on("down", () => this.moveSelection(1));
+    this.wasd.A.on("down", () => this.moveSelection(-1));
+    this.wasd.D.on("down", () => this.moveSelection(1));
 
+    this.highlight();
+  }
+
+  private moveSelection(delta: number): void {
+    this.selectedIndex = (this.selectedIndex + delta + CHARACTERS.length) % CHARACTERS.length;
     this.highlight();
   }
 
@@ -195,17 +204,5 @@ export class CharacterSelectScene extends Phaser.Scene {
   private confirm(): void {
     const character = CHARACTERS[this.selectedIndex];
     this.scene.start("LaserSelect", { characterId: character.id });
-  }
-
-  update(): void {
-    const left = Phaser.Input.Keyboard.JustDown(this.cursors.left!) || Phaser.Input.Keyboard.JustDown(this.wasd.A);
-    const right = Phaser.Input.Keyboard.JustDown(this.cursors.right!) || Phaser.Input.Keyboard.JustDown(this.wasd.D);
-    if (left) {
-      this.selectedIndex = (this.selectedIndex - 1 + CHARACTERS.length) % CHARACTERS.length;
-      this.highlight();
-    } else if (right) {
-      this.selectedIndex = (this.selectedIndex + 1) % CHARACTERS.length;
-      this.highlight();
-    }
   }
 }

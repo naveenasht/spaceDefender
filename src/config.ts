@@ -87,10 +87,13 @@ export interface LaserDef {
   color: number;
   edgeColor: number;
   ammoCost: number;
+  damage: number;
   pierceCount: number;
   spreadCount: number;
   spreadAngleDeg: number;
+  spreadOffsetPx: number;
   fireCooldownMult: number;
+  homing: boolean;
 }
 
 export const LASERS: LaserDef[] = [
@@ -102,10 +105,13 @@ export const LASERS: LaserDef[] = [
     color: 0x7cf7ff,
     edgeColor: 0xffffff,
     ammoCost: 1,
+    damage: 1,
     pierceCount: 1,
     spreadCount: 1,
     spreadAngleDeg: 0,
+    spreadOffsetPx: 0,
     fireCooldownMult: 1,
+    homing: false,
   },
   {
     id: "spread",
@@ -115,10 +121,13 @@ export const LASERS: LaserDef[] = [
     color: 0xffcf5c,
     edgeColor: 0xfff0c9,
     ammoCost: 2,
+    damage: 1,
     pierceCount: 1,
     spreadCount: 3,
     spreadAngleDeg: 16,
+    spreadOffsetPx: 0,
     fireCooldownMult: 1,
+    homing: false,
   },
   {
     id: "piercing",
@@ -128,10 +137,61 @@ export const LASERS: LaserDef[] = [
     color: 0xb84dff,
     edgeColor: 0xf0d9ff,
     ammoCost: 1,
+    damage: 1,
     pierceCount: 3,
     spreadCount: 1,
     spreadAngleDeg: 0,
+    spreadOffsetPx: 0,
     fireCooldownMult: 1.35,
+    homing: false,
+  },
+  {
+    id: "twin",
+    name: "Twin Laser",
+    tagline: "Parallel double-tap, focused DPS",
+    texture: "laserTwin",
+    color: 0x4da6ff,
+    edgeColor: 0xd6ecff,
+    ammoCost: 2,
+    damage: 1,
+    pierceCount: 1,
+    spreadCount: 2,
+    spreadAngleDeg: 0,
+    spreadOffsetPx: 12,
+    fireCooldownMult: 1,
+    homing: false,
+  },
+  {
+    id: "homing",
+    name: "Homing Laser",
+    tagline: "Auto-seeks the nearest target",
+    texture: "laserHoming",
+    color: 0x4dffa0,
+    edgeColor: 0xd6ffe9,
+    ammoCost: 2,
+    damage: 1,
+    pierceCount: 1,
+    spreadCount: 1,
+    spreadAngleDeg: 0,
+    spreadOffsetPx: 0,
+    fireCooldownMult: 1.15,
+    homing: true,
+  },
+  {
+    id: "cannon",
+    name: "Heavy Cannon",
+    tagline: "Slow but hits twice as hard",
+    texture: "laserCannon",
+    color: 0xff5d5d,
+    edgeColor: 0xffd6d6,
+    ammoCost: 3,
+    damage: 2,
+    pierceCount: 1,
+    spreadCount: 1,
+    spreadAngleDeg: 0,
+    spreadOffsetPx: 0,
+    fireCooldownMult: 1.6,
+    homing: false,
   },
 ];
 

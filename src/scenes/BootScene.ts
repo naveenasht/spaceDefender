@@ -23,6 +23,9 @@ export class BootScene extends Phaser.Scene {
     this.makeLaser("bossLaser", 0xff4dc4, 0xffd6f5, 20, 5);
     this.makeLaser("laserSpread", 0xffcf5c, 0xfff0c9, 15, 4);
     this.makeLaser("laserPierce", 0xb84dff, 0xf0d9ff, 26, 5);
+    this.makeLaser("laserTwin", 0x4da6ff, 0xd6ecff, 16, 4);
+    this.makeLaser("laserCannon", 0xff5d5d, 0xffd6d6, 24, 8);
+    this.makeHomingBolt();
     this.makeBoss();
 
     this.makeAmmoPickup();
@@ -113,6 +116,26 @@ export class BootScene extends Phaser.Scene {
     g.fillRoundedRect(0, 0, len, thick, thick / 2);
     g.strokeRoundedRect(0, 0, len, thick, thick / 2);
     g.generateTexture(key, len, thick);
+    g.destroy();
+  }
+
+  private makeHomingBolt(): void {
+    const g = this.add.graphics();
+    const s = 15;
+    g.fillStyle(0x4dffa0, 1);
+    g.lineStyle(1, 0xd6ffe9, 1);
+    // A diamond seeker reads clearly at any rotation, unlike a directional bolt
+    g.beginPath();
+    g.moveTo(s, s / 2);
+    g.lineTo(s / 2, 0);
+    g.lineTo(0, s / 2);
+    g.lineTo(s / 2, s);
+    g.closePath();
+    g.fillPath();
+    g.strokePath();
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(s / 2, s / 2, 2);
+    g.generateTexture("laserHoming", s, s);
     g.destroy();
   }
 

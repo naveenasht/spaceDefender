@@ -24,6 +24,7 @@ import { Boss } from "../objects/Boss";
 
 const BOSS_VOLLEY_COUNT = 5;
 const BOSS_VOLLEY_SPREAD_DEG = 55;
+const HOMING_TURN_RATE = 4.5; // radians/sec
 
 const RAPID_FIRE_DURATION_MS = 6000;
 
@@ -176,7 +177,7 @@ export class GameScene extends Phaser.Scene {
       const laser = laserObj as Phaser.Physics.Arcade.Image;
       const enemy = enemyObj as Enemy;
       if (!this.registerLaserHit(laser, enemy)) return;
-      const died = enemy.applyDamage(1);
+      const died = enemy.applyDamage(laser.getData("damage") as number);
       if (died) this.killEnemy(enemy);
     });
 
@@ -409,25 +410,52 @@ export class GameScene extends Phaser.Scene {
     const laserDef = this.player.laser;
     const offset = 22;
     const count = laserDef.spreadCount;
+    const perpAngle = fired.angle + Math.PI / 2;
 
     for (let i = 0; i < count; i++) {
-      const offsetDeg =
-        count === 1 ? 0 : -laserDef.spreadAngleDeg * ((count - 1) / 2) + laserDef.spreadAngleDeg * i;
-      const angle = fired.angle + Phaser.Math.DegToRad(offsetDeg);
+      // t distributes bolts symmetrically around the aim line: -1..1 for 3,
+      // -0.5/0.5 for 2, 0 for 1. Both angular fan and parallel offset share it,
+      // so spreadAngleDeg/spreadOffsetPx both mean "gap between adjacent bolts".
+      const t = count === 1 ? 0 : -((count - 1) / 2) + i;
+      const angle = fired.angle + Phaser.Math.DegToRad(laserDef.spreadAngleDeg * t);
+      const lateral = laserDef.spreadOffsetPx * t;
 
-      const laser = this.playerLasers.create(
-        this.player.x + Math.cos(angle) * offset,
-        this.player.y + Math.sin(angle) * offset,
-        laserDef.texture
-      ) as Phaser.Physics.Arcade.Image;
+      const spawnX = this.player.x + Math.cos(fired.angle) * offset + Math.cos(perpAngle) * lateral;
+      const spawnY = this.player.y + Math.sin(fired.angle) * offset + Math.sin(perpAngle) * lateral;
+
+      const laser = this.playerLasers.create(spawnX, spawnY, laserDef.texture) as Phaser.Physics.Arcade.Image;
       laser.setRotation(angle);
       laser.setDepth(2);
       laser.setData("pierceLeft", laserDef.pierceCount);
       laser.setData("hitSet", new Set());
+      laser.setData("damage", laserDef.damage);
+      laser.setData("homing", laserDef.homing);
       if (this.player.isRapidFire) laser.setTint(0xffcf5c);
       this.physics.velocityFromRotation(angle, LASER_SPEED, laser.body!.velocity);
       this.time.delayedCall(1500, () => laser.active && laser.destroy());
     }
+  }
+
+  private findNearestHomingTarget(x: number, y: number): { x: number; y: number } | null {
+    let nearest: { x: number; y: number } | null = null;
+    let nearestDist = Infinity;
+
+    for (const enemyObj of this.enemies.getChildren()) {
+      const enemy = enemyObj as Enemy;
+      if (!enemy.active) continue;
+      const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = enemy;
+      }
+    }
+
+    if (this.boss && this.boss.active) {
+      const dist = Phaser.Math.Distance.Between(x, y, this.boss.x, this.boss.y);
+      if (dist < nearestDist) nearest = this.boss;
+    }
+
+    return nearest;
   }
 
   private pickEnemyKind(): EnemyKind {
@@ -486,7 +514,7 @@ export class GameScene extends Phaser.Scene {
           const laser = laserObj as Phaser.Physics.Arcade.Image;
           const boss = bossObj as Boss;
           if (!this.registerLaserHit(laser, boss)) return;
-          const died = boss.applyDamage(1);
+          const died = boss.applyDamage(laser.getData("damage") as number);
           this.refreshHud();
           if (died) this.killBoss();
         }
@@ -698,6 +726,21 @@ export class GameScene extends Phaser.Scene {
     for (const laserObj of this.enemyLasers.getChildren()) {
       const laser = laserObj as Phaser.Physics.Arcade.Image;
       if (laser.y > GAME_HEIGHT + 20 || laser.y < -20) laser.destroy();
+    }
+
+    for (const laserObj of this.playerLasers.getChildren()) {
+      const laser = laserObj as Phaser.Physics.Arcade.Image;
+      if (laser.x < -20 || laser.x > GAME_WIDTH + 20 || laser.y < -20 || laser.y > GAME_HEIGHT + 20) {
+        laser.destroy();
+        continue;
+      }
+      if (!laser.getData("homing")) continue;
+      const target = this.findNearestHomingTarget(laser.x, laser.y);
+      if (!target) continue;
+      const desiredAngle = Phaser.Math.Angle.Between(laser.x, laser.y, target.x, target.y);
+      const newAngle = Phaser.Math.Angle.RotateTo(laser.rotation, desiredAngle, HOMING_TURN_RATE * (delta / 1000));
+      laser.setRotation(newAngle);
+      this.physics.velocityFromRotation(newAngle, LASER_SPEED, laser.body!.velocity);
     }
 
     for (const pickupObj of this.pickups.getChildren()) {
