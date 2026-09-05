@@ -24,6 +24,9 @@ import { Boss } from "../objects/Boss";
 
 const BOSS_VOLLEY_COUNT = 5;
 const BOSS_VOLLEY_SPREAD_DEG = 55;
+const BOSS_BEAM_SPEED = 520;
+const BOSS_BEAM_TELEGRAPH_MS = 450;
+const BOSS_BEAM_EVERY_NTH_ATTACK = 3;
 const HOMING_TURN_RATE = 4.5; // radians/sec
 
 const RAPID_FIRE_DURATION_MS = 6000;
@@ -545,6 +548,50 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Telegraphs (with an expanding warning ring) then fires a single fast, aimed beam. */
+  private chargeBossBeam(): void {
+    if (!this.boss) return;
+    this.boss.isCharging = true;
+
+    // Transparent-fill, thick amber ring: reads as a distinct warning against
+    // both the magenta boss body and the dark background, unlike a filled
+    // circle which just blends into the boss's own glowing core.
+    const warn = this.add
+      .circle(this.boss.x, this.boss.y, 46, 0xffe066, 0)
+      .setStrokeStyle(4, 0xffe066, 0.95)
+      .setDepth(5);
+    this.tweens.add({
+      targets: warn,
+      scale: { from: 0.75, to: 1.5 },
+      alpha: { from: 1, to: 0 },
+      duration: BOSS_BEAM_TELEGRAPH_MS,
+      ease: "Cubic.easeOut",
+      onUpdate: () => {
+        if (this.boss) warn.setPosition(this.boss.x, this.boss.y);
+      },
+      onComplete: () => warn.destroy(),
+    });
+
+    this.time.delayedCall(BOSS_BEAM_TELEGRAPH_MS, () => {
+      if (!this.boss) return;
+      this.boss.isCharging = false;
+      this.fireBossBeam();
+    });
+  }
+
+  private fireBossBeam(): void {
+    if (!this.boss) return;
+    const angle = Phaser.Math.Angle.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
+    const laser = this.enemyLasers.create(
+      this.boss.x,
+      this.boss.y + 20,
+      "bossBeam"
+    ) as Phaser.Physics.Arcade.Image;
+    laser.setRotation(angle);
+    laser.setDepth(2);
+    this.physics.velocityFromRotation(angle, BOSS_BEAM_SPEED, laser.body!.velocity);
+  }
+
   private killBoss(): void {
     const boss = this.boss;
     if (!boss) return;
@@ -702,10 +749,15 @@ export class GameScene extends Phaser.Scene {
       this.spawnBoss();
     }
 
-    if (this.boss && this.boss.isPatrolling) {
+    if (this.boss && this.boss.isPatrolling && !this.boss.isCharging) {
       if (this.time.now > this.boss.lastFiredAt + this.boss.fireCooldownMs) {
         this.boss.lastFiredAt = this.time.now;
-        this.fireBossVolley();
+        this.boss.attackCount += 1;
+        if (this.boss.attackCount % BOSS_BEAM_EVERY_NTH_ATTACK === 0) {
+          this.chargeBossBeam();
+        } else {
+          this.fireBossVolley();
+        }
       }
     }
 

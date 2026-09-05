@@ -19,6 +19,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite {
   fireCooldownMs: number;
   lastFiredAt = 0;
   isPatrolling = false;
+  isCharging = false;
+  attackCount = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, opts: BossOptions) {
     super(scene, x, y, "boss");

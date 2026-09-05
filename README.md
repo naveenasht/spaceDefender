@@ -20,7 +20,8 @@ A browser-based top-down space shooter built with [Phaser](https://phaser.io/) 4
 - Bomb, shield, and rapid-fire pickups go into one of your 4 power-up slots; press **F** to use the oldest one in the queue. Bomb clears all on-screen enemies; shield grants temporary invulnerability; rapid fire triples your fire rate for a few seconds.
 - The purple "random item" pickup resolves into an instant ammo burst or one of the above slot power-ups.
 - A HULL bar at the top shows remaining lives (color-coded green/amber/red), with a brief invulnerability window after each hit.
-- Every level has a boss: once your score crosses a threshold, normal spawning pauses, a banner announces it, and a large ship enters with its own HP bar and fires spread volleys. It only takes damage from your laser (or a chunk from a bomb power-up) — ramming it just hurts you. Defeating it pays a big score bonus, drops several pickups, and resumes normal spawning; the next boss threshold and its HP both scale up.
+- Every level has a boss: once your score crosses a threshold, normal spawning pauses, a banner announces it, and a large ship enters with its own HP bar. It only takes damage from your laser (or a chunk from a bomb power-up) — ramming it just hurts you. Defeating it pays a big score bonus, drops several pickups, and resumes normal spawning; the next boss threshold and its HP both scale up.
+- The boss alternates two attacks: a 5-shot spread volley, and every third attack a **beam** — a fast, aimed bolt telegraphed half a second ahead by an expanding amber warning ring, so it's dodgeable if you react to the ring.
 - On Game Over, retry keeps your character/level choice, or press **M** to return to the main menu and pick again.
 
 ## Development
