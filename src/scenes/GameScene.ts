@@ -94,6 +94,7 @@ export class GameScene extends Phaser.Scene {
   private touchControls = false;
   private moveStick?: VirtualJoystick;
   private aimStick?: VirtualJoystick;
+  private explosionEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
 
   constructor() {
     super("Game");
@@ -130,6 +131,21 @@ export class GameScene extends Phaser.Scene {
     this.slotTypes = [];
 
     this.createStarfield();
+
+    // One pooled emitter reused for every explosion, rather than spawning a
+    // fresh batch of Image + Tween objects per kill — mass-kill moments
+    // (bomb power-up, boss defeat) used to allocate hundreds of those at
+    // once and visibly stall a frame.
+    this.explosionEmitter = this.add
+      .particles(0, 0, "spark", {
+        lifespan: 300,
+        speed: { min: 50, max: 140 },
+        angle: { min: 0, max: 360 },
+        scale: { start: 1, end: 0.4 },
+        alpha: { start: 1, end: 0 },
+        emitting: false,
+      })
+      .setDepth(3);
 
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
     this.playerLasers = this.physics.add.group();
@@ -759,19 +775,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnExplosion(x: number, y: number): void {
-    for (let i = 0; i < 8; i++) {
-      const spark = this.add.image(x, y, "spark").setDepth(3);
-      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      const dist = Phaser.Math.Between(16, 40);
-      this.tweens.add({
-        targets: spark,
-        x: x + Math.cos(angle) * dist,
-        y: y + Math.sin(angle) * dist,
-        alpha: 0,
-        duration: 300,
-        onComplete: () => spark.destroy(),
-      });
-    }
+    this.explosionEmitter.explode(8, x, y);
   }
 
   private collectPickup(kind: PickupKind): void {
