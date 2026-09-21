@@ -21,6 +21,8 @@ import { Player } from "../objects/Player";
 import { Enemy, type EnemyKind } from "../objects/Enemy";
 import { Pickup, type PickupKind } from "../objects/Pickup";
 import { Boss } from "../objects/Boss";
+import { recordScore } from "../persistence";
+import { audio } from "../audio";
 
 const BOSS_VOLLEY_COUNT = 5;
 const BOSS_VOLLEY_SPREAD_DEG = 55;
@@ -83,6 +85,7 @@ export class GameScene extends Phaser.Scene {
   private bossBarFill!: Phaser.GameObjects.Rectangle;
   private bossBarWidth = 340;
   private bossBarHeight = 14;
+  private muteButton!: Phaser.GameObjects.Image;
 
   constructor() {
     super("Game");
@@ -130,6 +133,14 @@ export class GameScene extends Phaser.Scene {
     };
     this.keyF = this.input.keyboard!.addKey("F");
     this.keySpace = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+    const pauseGame = () => {
+      if (this.gameOver || this.scene.isActive("Pause")) return;
+      this.scene.launch("Pause");
+      this.scene.pause();
+    };
+    this.input.keyboard!.addKey("P").on("down", pauseGame);
+    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC).on("down", pauseGame);
 
     this.enemySpawnTimer = this.time.addEvent({
       delay: this.level.enemySpawnMs,
@@ -180,6 +191,7 @@ export class GameScene extends Phaser.Scene {
       const laser = laserObj as Phaser.Physics.Arcade.Image;
       const enemy = enemyObj as Enemy;
       if (!this.registerLaserHit(laser, enemy)) return;
+      audio.enemyHit();
       const died = enemy.applyDamage(laser.getData("damage") as number);
       if (died) this.killEnemy(enemy);
     });
@@ -187,17 +199,22 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.enemies, (_playerObj, enemyObj) => {
       const enemy = enemyObj as Enemy;
       const hit = this.player.takeHit();
+      if (hit) audio.playerHit();
       this.killEnemy(enemy, hit ? undefined : "noscore");
       if (hit) this.checkGameOver();
     });
 
     this.physics.add.overlap(this.player, this.enemyLasers, (_playerObj, laserObj) => {
       (laserObj as Phaser.Physics.Arcade.Image).destroy();
-      if (this.player.takeHit()) this.checkGameOver();
+      if (this.player.takeHit()) {
+        audio.playerHit();
+        this.checkGameOver();
+      }
     });
 
     this.physics.add.overlap(this.player, this.pickups, (_playerObj, pickupObj) => {
       const pickup = pickupObj as Pickup;
+      audio.pickup();
       this.collectPickup(pickup.kind);
       pickup.destroy();
     });
@@ -246,6 +263,19 @@ export class GameScene extends Phaser.Scene {
       this.slotIcons.push(null);
       this.slotTypes.push(undefined);
     }
+
+    this.muteButton = this.add
+      .image(GAME_WIDTH - 24, GAME_HEIGHT - 24, audio.isMuted() ? "speakerOff" : "speakerOn")
+      .setInteractive({ useHandCursor: true })
+      .setDepth(25);
+    this.muteButton.on(
+      "pointerdown",
+      (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        const muted = audio.toggleMuted();
+        this.muteButton.setTexture(muted ? "speakerOff" : "speakerOn");
+      }
+    );
 
     this.refreshHud();
   }
@@ -410,6 +440,7 @@ export class GameScene extends Phaser.Scene {
   private fireLaser(): void {
     const fired = this.player.tryFire(this.time.now);
     if (!fired) return;
+    audio.playerFire();
     const laserDef = this.player.laser;
     const offset = 22;
     const count = laserDef.spreadCount;
@@ -499,6 +530,7 @@ export class GameScene extends Phaser.Scene {
     this.bossActive = true;
     this.enemySpawnTimer.paused = true;
     this.pickupSpawnTimer.paused = true;
+    audio.bossIncoming();
     this.showBanner(`${this.level.bossName.toUpperCase()} INCOMING`, "#ff4dc4");
 
     this.time.delayedCall(1400, () => {
@@ -517,13 +549,17 @@ export class GameScene extends Phaser.Scene {
           const laser = laserObj as Phaser.Physics.Arcade.Image;
           const boss = bossObj as Boss;
           if (!this.registerLaserHit(laser, boss)) return;
+          audio.enemyHit();
           const died = boss.applyDamage(laser.getData("damage") as number);
           this.refreshHud();
           if (died) this.killBoss();
         }
       );
       this.bossPlayerOverlap = this.physics.add.overlap(this.player, this.boss, () => {
-        if (this.player.takeHit()) this.checkGameOver();
+        if (this.player.takeHit()) {
+          audio.playerHit();
+          this.checkGameOver();
+        }
       });
 
       this.showBossBar();
@@ -552,6 +588,7 @@ export class GameScene extends Phaser.Scene {
   private chargeBossBeam(): void {
     if (!this.boss) return;
     this.boss.isCharging = true;
+    audio.bossTelegraph();
 
     // Transparent-fill, thick amber ring: reads as a distinct warning against
     // both the magenta boss body and the dark background, unlike a filled
@@ -595,6 +632,7 @@ export class GameScene extends Phaser.Scene {
   private killBoss(): void {
     const boss = this.boss;
     if (!boss) return;
+    audio.bossDefeated();
 
     this.score += SCORE.boss + this.bossesDefeated * 100;
     this.bossesDefeated += 1;
@@ -643,6 +681,7 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.spawnExplosion(enemy.x, enemy.y);
+    audio.explosion();
     enemy.destroy();
   }
 
@@ -691,6 +730,7 @@ export class GameScene extends Phaser.Scene {
   private usePowerup(): void {
     const type: PowerupType | null = this.player.useNextPowerup();
     if (!type) return;
+    audio.powerupUse();
     if (type === "bomb") {
       const active = this.enemies.getChildren().slice() as Enemy[];
       for (const enemy of active) this.killEnemy(enemy);
@@ -710,12 +750,15 @@ export class GameScene extends Phaser.Scene {
     this.refreshHud();
     if (this.player.lives <= 0 && !this.gameOver) {
       this.gameOver = true;
+      audio.gameOver();
+      const scoreResult = recordScore(this.level.id, this.score);
       this.time.delayedCall(400, () => {
         this.scene.start("GameOver", {
           score: this.score,
           characterId: this.character.id,
           laserId: this.laser.id,
           levelId: this.level.id,
+          ...scoreResult,
         });
       });
     }

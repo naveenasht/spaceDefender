@@ -37,6 +37,8 @@ export class BootScene extends Phaser.Scene {
     this.makeShieldFx();
     this.makeStar();
     this.makeParticle();
+    this.makeSpeakerIcon("speakerOn", true);
+    this.makeSpeakerIcon("speakerOff", false);
 
     this.scene.start("Menu");
   }
@@ -253,6 +255,44 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xffcf5c, 1);
     g.fillCircle(4, 4, 4);
     g.generateTexture("spark", 8, 8);
+    g.destroy();
+  }
+
+  private makeSpeakerIcon(key: string, on: boolean): void {
+    const g = this.add.graphics();
+    const w = 26;
+    const h = 22;
+    const fill = on ? 0xc9d6e3 : 0x6f88a3;
+    g.fillStyle(fill, 1);
+    // Speaker body: a small rect back-half plus a flared cone front-half
+    g.fillRect(0, h * 0.32, w * 0.32, h * 0.36);
+    g.beginPath();
+    g.moveTo(w * 0.32, h * 0.32);
+    g.lineTo(w * 0.58, h * 0.1);
+    g.lineTo(w * 0.58, h * 0.9);
+    g.lineTo(w * 0.32, h * 0.68);
+    g.closePath();
+    g.fillPath();
+
+    if (on) {
+      g.lineStyle(2, fill, 1);
+      g.beginPath();
+      g.arc(w * 0.58, h * 0.5, w * 0.16, Phaser.Math.DegToRad(-50), Phaser.Math.DegToRad(50));
+      g.strokePath();
+      g.beginPath();
+      g.arc(w * 0.58, h * 0.5, w * 0.28, Phaser.Math.DegToRad(-50), Phaser.Math.DegToRad(50));
+      g.strokePath();
+    } else {
+      g.lineStyle(2.5, 0xff5d5d, 1);
+      g.beginPath();
+      g.moveTo(w * 0.66, h * 0.14);
+      g.lineTo(w * 0.98, h * 0.86);
+      g.moveTo(w * 0.98, h * 0.14);
+      g.lineTo(w * 0.66, h * 0.86);
+      g.strokePath();
+    }
+
+    g.generateTexture(key, w, h);
     g.destroy();
   }
 }

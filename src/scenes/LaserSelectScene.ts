@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH, LASERS, type LaserDef } from "../config";
+import { audio } from "../audio";
 
 const CHIP_WIDTH = 112;
 const CHIP_HEIGHT = 92;
@@ -118,6 +119,7 @@ export class LaserSelectScene extends Phaser.Scene {
 
   private moveSelection(delta: number): void {
     this.selectedIndex = (this.selectedIndex + delta + LASERS.length) % LASERS.length;
+    audio.uiMove();
     this.refresh();
   }
 
@@ -273,6 +275,7 @@ export class LaserSelectScene extends Phaser.Scene {
 
   private confirm(): void {
     const laser = LASERS[this.selectedIndex];
+    audio.uiConfirm();
     this.scene.start("LevelSelect", { characterId: this.characterId, laserId: laser.id });
   }
 }

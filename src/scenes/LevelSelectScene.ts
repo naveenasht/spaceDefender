@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH, LASERS, LEVELS, type LevelDef } from "../config";
+import { getBestForLevel } from "../persistence";
+import { audio } from "../audio";
 
 const CARD_WIDTH = 200;
 const CARD_HEIGHT = 300;
@@ -103,6 +105,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
   private moveSelection(delta: number): void {
     this.selectedIndex = (this.selectedIndex + delta + LEVELS.length) % LEVELS.length;
+    audio.uiMove();
     this.highlight();
   }
 
@@ -191,6 +194,16 @@ export class LevelSelectScene extends Phaser.Scene {
         .setOrigin(1, 0.5)
         .setDepth(2);
     });
+
+    const best = getBestForLevel(level.id);
+    this.add
+      .text(cx, CARD_TOP + CARD_HEIGHT - 22, best > 0 ? `SECTOR BEST: ${best}` : "SECTOR BEST: —", {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#ffcf5c",
+      })
+      .setOrigin(0.5)
+      .setDepth(2);
   }
 
   private highlight(): void {
@@ -211,6 +224,7 @@ export class LevelSelectScene extends Phaser.Scene {
 
   private confirm(): void {
     const level = LEVELS[this.selectedIndex];
+    audio.uiConfirm();
     this.scene.start("Game", {
       characterId: this.characterId,
       laserId: this.laserId,

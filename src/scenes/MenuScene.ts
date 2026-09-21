@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH } from "../config";
+import { audio } from "../audio";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -34,7 +35,7 @@ export class MenuScene extends Phaser.Scene {
       "MOVE:  WASD / Arrow Keys",
       "AIM:   Mouse Pointer",
       "FIRE:  Left Click / Space",
-      "POWER-UP:  F",
+      "POWER-UP:  F     PAUSE:  P",
       "",
       "Collect ammo, shields, bombs & random items.",
       "Shooter enemies fire back — watch your ammo!",
@@ -60,7 +61,23 @@ export class MenuScene extends Phaser.Scene {
 
     this.tweens.add({ targets: prompt, alpha: 0.2, duration: 650, yoyo: true, repeat: -1 });
 
-    this.input.keyboard!.once("keydown-SPACE", () => this.scene.start("CharacterSelect"));
-    this.input.once("pointerdown", () => this.scene.start("CharacterSelect"));
+    const muteButton = this.add
+      .image(GAME_WIDTH - 28, 28, audio.isMuted() ? "speakerOff" : "speakerOn")
+      .setInteractive({ useHandCursor: true })
+      .setScale(1.1);
+    muteButton.on("pointerdown", (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      const muted = audio.toggleMuted();
+      muteButton.setTexture(muted ? "speakerOff" : "speakerOn");
+    });
+
+    const start = () => {
+      audio.resume();
+      audio.startMusic();
+      audio.uiConfirm();
+      this.scene.start("CharacterSelect");
+    };
+    this.input.keyboard!.once("keydown-SPACE", start);
+    this.input.once("pointerdown", start);
   }
 }

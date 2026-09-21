@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH, PLAYER_START_LIVES, type CharacterDef } from "../config";
+import { audio } from "../audio";
 
 const CARD_WIDTH = 200;
 const CARD_HEIGHT = 340;
@@ -96,6 +97,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
   private moveSelection(delta: number): void {
     this.selectedIndex = (this.selectedIndex + delta + CHARACTERS.length) % CHARACTERS.length;
+    audio.uiMove();
     this.highlight();
   }
 
@@ -203,6 +205,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
   private confirm(): void {
     const character = CHARACTERS[this.selectedIndex];
+    audio.uiConfirm();
     this.scene.start("LaserSelect", { characterId: character.id });
   }
 }

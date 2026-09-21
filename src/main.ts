@@ -7,6 +7,7 @@ import { LaserSelectScene } from "./scenes/LaserSelectScene";
 import { LevelSelectScene } from "./scenes/LevelSelectScene";
 import { GameScene } from "./scenes/GameScene";
 import { GameOverScene } from "./scenes/GameOverScene";
+import { PauseScene } from "./scenes/PauseScene";
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -30,5 +31,6 @@ new Phaser.Game({
     LevelSelectScene,
     GameScene,
     GameOverScene,
+    PauseScene,
   ],
 });
