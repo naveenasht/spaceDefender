@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH } from "../config";
 import { audio } from "../audio";
+import { getCoins } from "../persistence";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -60,6 +61,15 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.tweens.add({ targets: prompt, alpha: 0.2, duration: 650, yoyo: true, repeat: -1 });
+
+    this.add.image(28, 28, "coinIcon").setScale(1.1);
+    this.add
+      .text(48, 28, `${getCoins()}`, {
+        fontFamily: "monospace",
+        fontSize: "16px",
+        color: "#ffd54d",
+      })
+      .setOrigin(0, 0.5);
 
     const muteButton = this.add
       .image(GAME_WIDTH - 28, 28, audio.isMuted() ? "speakerOff" : "speakerOn")

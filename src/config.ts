@@ -26,6 +26,9 @@ export const SCORE = {
   extra: 60,
 } as const;
 
+/** Coins awarded for clearing a sector, scaled by its difficulty tier. */
+export const COINS_PER_DIFFICULTY = 50;
+
 export interface CharacterDef {
   id: string;
   name: string;

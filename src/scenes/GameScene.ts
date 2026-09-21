@@ -3,6 +3,7 @@ import {
   AMMO_BURST_AMOUNT,
   AMMO_PACK_AMOUNT,
   CHARACTERS,
+  COINS_PER_DIFFICULTY,
   ENEMY_LASER_SPEED,
   GAME_HEIGHT,
   GAME_WIDTH,
@@ -21,7 +22,7 @@ import { Player } from "../objects/Player";
 import { Enemy, type EnemyKind } from "../objects/Enemy";
 import { Pickup, type PickupKind } from "../objects/Pickup";
 import { VirtualJoystick } from "../objects/VirtualJoystick";
-import { recordScore } from "../persistence";
+import { addCoins, recordScore } from "../persistence";
 import { audio } from "../audio";
 
 const HOMING_TURN_RATE = 4.5; // radians/sec
@@ -641,6 +642,8 @@ export class GameScene extends Phaser.Scene {
     this.gameOver = true;
     audio.levelCleared();
     const scoreResult = recordScore(this.level.id, this.score);
+    const coinsEarned = this.level.difficulty * COINS_PER_DIFFICULTY;
+    const totalCoins = addCoins(coinsEarned);
     this.time.delayedCall(400, () => {
       this.scene.start("GameOver", {
         score: this.score,
@@ -648,6 +651,8 @@ export class GameScene extends Phaser.Scene {
         laserId: this.laser.id,
         levelId: this.level.id,
         outcome: "cleared",
+        coinsEarned,
+        totalCoins,
         ...scoreResult,
       });
     });

@@ -53,3 +53,25 @@ export function recordScore(levelId: string, score: number): ScoreResult {
 
   return { isNewOverallBest, isNewLevelBest };
 }
+
+const COINS_KEY = "spaceDefender.coins.v1";
+
+export function getCoins(): number {
+  try {
+    return Math.max(0, parseInt(localStorage.getItem(COINS_KEY) ?? "0", 10) || 0);
+  } catch {
+    return 0;
+  }
+}
+
+/** Adds coins to the persisted balance and returns the new total. */
+export function addCoins(amount: number): number {
+  const total = getCoins() + amount;
+  try {
+    localStorage.setItem(COINS_KEY, String(total));
+  } catch {
+    // Private browsing, disabled storage, or quota exceeded — coins just
+    // won't persist this session.
+  }
+  return total;
+}

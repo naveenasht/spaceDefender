@@ -38,6 +38,7 @@ export class BootScene extends Phaser.Scene {
     this.makeSpeakerIcon("speakerOn", true);
     this.makeSpeakerIcon("speakerOff", false);
     this.makePauseIcon();
+    this.makeCoinIcon();
 
     this.scene.start("Menu");
   }
@@ -299,6 +300,20 @@ export class BootScene extends Phaser.Scene {
     g.fillRoundedRect(w * 0.22, h * 0.15, w * 0.2, h * 0.7, 2);
     g.fillRoundedRect(w * 0.58, h * 0.15, w * 0.2, h * 0.7, 2);
     g.generateTexture("pauseIcon", w, h);
+    g.destroy();
+  }
+
+  private makeCoinIcon(): void {
+    const g = this.add.graphics();
+    const s = 24;
+    const r = s / 2;
+    g.fillStyle(0xffd54d, 1);
+    g.lineStyle(2, 0xb8842e, 1);
+    g.fillCircle(r, r, r - 2);
+    g.strokeCircle(r, r, r - 2);
+    g.fillStyle(0xfff0b8, 0.9);
+    g.fillCircle(r - r * 0.3, r - r * 0.3, r * 0.28);
+    g.generateTexture("coinIcon", s, s);
     g.destroy();
   }
 }

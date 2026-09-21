@@ -10,6 +10,8 @@ interface GameOverData {
   isNewOverallBest?: boolean;
   isNewLevelBest?: boolean;
   outcome?: "died" | "cleared";
+  coinsEarned?: number;
+  totalCoins?: number;
 }
 
 export class GameOverScene extends Phaser.Scene {
@@ -53,6 +55,26 @@ export class GameOverScene extends Phaser.Scene {
         .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.51, `SECTOR BEST: ${getBestForLevel(data.levelId)}`, {
           fontFamily: "monospace",
           fontSize: "14px",
+          color: "#9fb3c8",
+        })
+        .setOrigin(0.5);
+    }
+
+    if (cleared) {
+      const coinY = GAME_HEIGHT * 0.58;
+      this.add.image(GAME_WIDTH / 2 - 4, coinY, "coinIcon").setScale(0.75).setOrigin(1, 0.5);
+      this.add
+        .text(GAME_WIDTH / 2 + 12, coinY, `+${data.coinsEarned ?? 0} COINS`, {
+          fontFamily: "monospace",
+          fontSize: "15px",
+          color: "#ffd54d",
+          fontStyle: "bold",
+        })
+        .setOrigin(0, 0.5);
+      this.add
+        .text(GAME_WIDTH / 2, coinY + 18, `TOTAL: ${data.totalCoins ?? 0}`, {
+          fontFamily: "monospace",
+          fontSize: "11px",
           color: "#9fb3c8",
         })
         .setOrigin(0.5);
