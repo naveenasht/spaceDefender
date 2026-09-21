@@ -156,6 +156,16 @@ class AudioEngine {
     this.beep({ freq: 700, sweepTo: 1050, duration: 0.1, type: "square", gain: 0.15 });
   }
 
+  purchase(): void {
+    [660, 990].forEach((freq, i) => {
+      this.beep({ freq, duration: 0.12, type: "triangle", gain: 0.2, startOffset: i * 0.09 });
+    });
+  }
+
+  denied(): void {
+    this.beep({ freq: 160, duration: 0.18, type: "square", gain: 0.18 });
+  }
+
   startMusic(): void {
     const ctx = this.ensureContext();
     if (!ctx || !this.masterGain || this.muted || this.musicNodes) return;

@@ -96,6 +96,8 @@ export interface LaserDef {
   spreadOffsetPx: number;
   fireCooldownMult: number;
   homing: boolean;
+  /** Coins required to unlock this laser; 0 means available from the start. */
+  coinCost: number;
 }
 
 export const LASERS: LaserDef[] = [
@@ -114,6 +116,7 @@ export const LASERS: LaserDef[] = [
     spreadOffsetPx: 0,
     fireCooldownMult: 1,
     homing: false,
+    coinCost: 0,
   },
   {
     id: "spread",
@@ -130,6 +133,7 @@ export const LASERS: LaserDef[] = [
     spreadOffsetPx: 0,
     fireCooldownMult: 1,
     homing: false,
+    coinCost: 0,
   },
   {
     id: "piercing",
@@ -146,6 +150,7 @@ export const LASERS: LaserDef[] = [
     spreadOffsetPx: 0,
     fireCooldownMult: 1.35,
     homing: false,
+    coinCost: 150,
   },
   {
     id: "twin",
@@ -162,6 +167,7 @@ export const LASERS: LaserDef[] = [
     spreadOffsetPx: 12,
     fireCooldownMult: 1,
     homing: false,
+    coinCost: 100,
   },
   {
     id: "homing",
@@ -178,6 +184,7 @@ export const LASERS: LaserDef[] = [
     spreadOffsetPx: 0,
     fireCooldownMult: 1.15,
     homing: true,
+    coinCost: 200,
   },
   {
     id: "cannon",
@@ -194,6 +201,7 @@ export const LASERS: LaserDef[] = [
     spreadOffsetPx: 0,
     fireCooldownMult: 1.6,
     homing: false,
+    coinCost: 250,
   },
 ];
 

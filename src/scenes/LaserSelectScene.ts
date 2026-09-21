@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH, LASERS, type LaserDef } from "../config";
 import { audio } from "../audio";
+import { getCoins, isLaserUnlocked, spendCoins, unlockLaser } from "../persistence";
 
 const CHIP_WIDTH = 112;
 const CHIP_HEIGHT = 92;
@@ -38,7 +39,9 @@ export class LaserSelectScene extends Phaser.Scene {
   private characterId!: string;
   private selectedIndex = 0;
   private chips: Phaser.GameObjects.Rectangle[] = [];
+  private chipExtras: Phaser.GameObjects.GameObject[] = [];
   private detailObjects: Phaser.GameObjects.GameObject[] = [];
+  private coinsText!: Phaser.GameObjects.Text;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
   private keyEnter!: Phaser.Input.Keyboard.Key;
@@ -53,6 +56,7 @@ export class LaserSelectScene extends Phaser.Scene {
     this.characterId = data.characterId ?? CHARACTERS[0].id;
     this.selectedIndex = 0;
     this.chips = [];
+    this.chipExtras = [];
     this.detailObjects = [];
     this.cameras.main.setBackgroundColor(0x05070d);
 
@@ -81,16 +85,19 @@ export class LaserSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const totalWidth = LASERS.length * CHIP_WIDTH + (LASERS.length - 1) * CHIP_GAP;
-    const startX = GAME_WIDTH / 2 - totalWidth / 2;
+    this.add.image(GAME_WIDTH - 90, 24, "coinIcon").setScale(0.85);
+    this.coinsText = this.add
+      .text(GAME_WIDTH - 76, 24, `${getCoins()}`, {
+        fontFamily: "monospace",
+        fontSize: "15px",
+        color: "#ffd54d",
+      })
+      .setOrigin(0, 0.5);
 
-    LASERS.forEach((laser, i) => {
-      const cx = startX + i * (CHIP_WIDTH + CHIP_GAP) + CHIP_WIDTH / 2;
-      this.buildChip(laser, i, cx);
-    });
+    this.buildChips();
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 34, "←/→ SELECT   ENTER OR CLICK TO CONFIRM   BACKSPACE: BACK", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 34, "←/→ SELECT   ENTER OR CLICK TO CONFIRM/UNLOCK   BACKSPACE: BACK", {
         fontFamily: "monospace",
         fontSize: "13px",
         color: "#9fb3c8",
@@ -123,8 +130,24 @@ export class LaserSelectScene extends Phaser.Scene {
     this.refresh();
   }
 
+  private buildChips(): void {
+    this.chips.forEach((chip) => chip.destroy());
+    this.chips = [];
+    this.chipExtras.forEach((obj) => obj.destroy());
+    this.chipExtras = [];
+
+    const totalWidth = LASERS.length * CHIP_WIDTH + (LASERS.length - 1) * CHIP_GAP;
+    const startX = GAME_WIDTH / 2 - totalWidth / 2;
+
+    LASERS.forEach((laser, i) => {
+      const cx = startX + i * (CHIP_WIDTH + CHIP_GAP) + CHIP_WIDTH / 2;
+      this.buildChip(laser, i, cx);
+    });
+  }
+
   private buildChip(laser: LaserDef, index: number, cx: number): void {
     const cy = CHIP_TOP + CHIP_HEIGHT / 2;
+    const locked = !isLaserUnlocked(laser.id, laser.coinCost);
 
     const chip = this.add
       .rectangle(cx, cy, CHIP_WIDTH, CHIP_HEIGHT, 0x0b1626, 0.85)
@@ -142,19 +165,26 @@ export class LaserSelectScene extends Phaser.Scene {
       this.confirm();
     });
 
-    this.add.image(cx, CHIP_TOP + 30, laser.texture).setScale(1.4).setAngle(-90).setDepth(2);
+    const icon = this.add.image(cx, CHIP_TOP + 30, laser.texture).setScale(1.4).setAngle(-90).setDepth(2);
+    this.chipExtras.push(icon);
+    if (locked) {
+      icon.setTint(0x4a5568).setAlpha(0.5);
+      this.chipExtras.push(this.add.image(cx, CHIP_TOP + 30, "lockIcon").setScale(0.9).setDepth(3));
+    }
 
-    this.add
-      .text(cx, CHIP_TOP + 58, laser.name.toUpperCase(), {
-        fontFamily: "monospace",
-        fontSize: "10px",
-        color: Phaser.Display.Color.IntegerToColor(laser.color).rgba,
-        fontStyle: "bold",
-        align: "center",
-        wordWrap: { width: CHIP_WIDTH - 12 },
-      })
-      .setOrigin(0.5, 0)
-      .setDepth(2);
+    this.chipExtras.push(
+      this.add
+        .text(cx, CHIP_TOP + 58, laser.name.toUpperCase(), {
+          fontFamily: "monospace",
+          fontSize: "10px",
+          color: locked ? "#5a6b80" : Phaser.Display.Color.IntegerToColor(laser.color).rgba,
+          fontStyle: "bold",
+          align: "center",
+          wordWrap: { width: CHIP_WIDTH - 12 },
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(2)
+    );
   }
 
   private renderDetail(): void {
@@ -255,6 +285,23 @@ export class LaserSelectScene extends Phaser.Scene {
         .setDepth(3);
       this.detailObjects.push(fill);
     });
+
+    if (!isLaserUnlocked(laser.id, laser.coinCost)) {
+      const bannerY = DETAIL_TOP + DETAIL_HEIGHT - 32;
+      const canAfford = getCoins() >= laser.coinCost;
+      const icon = this.add.image(panelCx - 90, bannerY, "lockIcon").setScale(1.1).setDepth(2);
+      this.detailObjects.push(icon);
+      const label = this.add
+        .text(panelCx - 68, bannerY, `UNLOCK FOR ${laser.coinCost} COINS`, {
+          fontFamily: "monospace",
+          fontSize: "14px",
+          color: canAfford ? "#ffd54d" : "#6f88a3",
+          fontStyle: "bold",
+        })
+        .setOrigin(0, 0.5)
+        .setDepth(2);
+      this.detailObjects.push(label);
+    }
   }
 
   private refresh(): void {
@@ -275,7 +322,22 @@ export class LaserSelectScene extends Phaser.Scene {
 
   private confirm(): void {
     const laser = LASERS[this.selectedIndex];
-    audio.uiConfirm();
-    this.scene.start("LevelSelect", { characterId: this.characterId, laserId: laser.id });
+
+    if (isLaserUnlocked(laser.id, laser.coinCost)) {
+      audio.uiConfirm();
+      this.scene.start("LevelSelect", { characterId: this.characterId, laserId: laser.id });
+      return;
+    }
+
+    if (spendCoins(laser.coinCost)) {
+      unlockLaser(laser.id);
+      audio.purchase();
+      this.coinsText.setText(`${getCoins()}`);
+      this.buildChips();
+      this.refresh();
+    } else {
+      audio.denied();
+      this.cameras.main.shake(200, 0.006);
+    }
   }
 }

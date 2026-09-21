@@ -39,6 +39,7 @@ export class BootScene extends Phaser.Scene {
     this.makeSpeakerIcon("speakerOff", false);
     this.makePauseIcon();
     this.makeCoinIcon();
+    this.makeLockIcon();
 
     this.scene.start("Menu");
   }
@@ -314,6 +315,23 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xfff0b8, 0.9);
     g.fillCircle(r - r * 0.3, r - r * 0.3, r * 0.28);
     g.generateTexture("coinIcon", s, s);
+    g.destroy();
+  }
+
+  private makeLockIcon(): void {
+    const g = this.add.graphics();
+    const w = 22;
+    const h = 22;
+    g.fillStyle(0xc9d6e3, 1);
+    g.lineStyle(2.5, 0xc9d6e3, 1);
+    // shackle: an open-bottomed ring
+    g.beginPath();
+    g.arc(w / 2, h * 0.38, w * 0.26, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(-20), true);
+    g.strokePath();
+    g.fillRoundedRect(w * 0.18, h * 0.42, w * 0.64, h * 0.46, 3);
+    g.fillStyle(0x0b1626, 1);
+    g.fillCircle(w / 2, h * 0.63, 2.5);
+    g.generateTexture("lockIcon", w, h);
     g.destroy();
   }
 }

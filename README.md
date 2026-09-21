@@ -15,7 +15,7 @@ A browser-based top-down space shooter built with [Phaser](https://phaser.io/) 4
 
 - Flow: **Menu → Character Select → Laser Select → Level Select → Game → Game Over**. Backspace steps back a screen; arrow keys/A-D move the selection, Enter or a click confirms.
 - **Characters** trade off speed, fire rate, lives, and ammo: Interceptor (balanced), Vanguard (tankier, slower), Striker (fast and fragile). Stats are shown as bars on the select screen.
-- **Lasers** — six weapons with real tradeoffs, picked from a chip strip + detail panel showing damage/power/pierce/rate/ammo bars: Pulse (balanced default), Spread (3-way fan, great vs crowds), Piercing (punches through 3 targets), Twin (parallel double-tap, focused single-target DPS), Homing (bolts auto-steer toward the nearest enemy), Heavy Cannon (2x damage per hit, slow fire rate, expensive ammo).
+- **Lasers** — six weapons with real tradeoffs, picked from a chip strip + detail panel showing damage/power/pierce/rate/ammo bars: Pulse (balanced default, free), Spread (3-way fan, great vs crowds, free), Twin (parallel double-tap, focused single-target DPS, 100 coins), Piercing (punches through 3 targets, 150 coins), Homing (bolts auto-steer toward the nearest enemy, 200 coins), Heavy Cannon (2x damage per hit, slow fire rate, expensive ammo, 250 coins). Locked lasers show a lock icon on their chip and a coin cost in the detail panel; selecting one spends coins to unlock it permanently instead of confirming.
 - **Levels** (Sector Alpha/Beta/Gamma) scale enemy spawn rate and the mix of shooter/elite enemies. Each has a survival-time goal (1:30 / 2:00 / 2:30) shown as a countdown bar under the HULL bar — reach it and the sector clears; run out of lives first and it's Game Over instead.
 - Destroy enemies for score. Basic enemies just drop in; **shooter** enemies (orange) fire lasers back at you; **extra** enemies (purple) are tougher, worth more, and always drop a pickup on death.
 - Ammo is limited — pick up green ammo packs to refill.
@@ -24,7 +24,7 @@ A browser-based top-down space shooter built with [Phaser](https://phaser.io/) 4
 - A HULL bar at the top shows remaining lives (color-coded green/amber/red), with a brief invulnerability window after each hit.
 - Either way — SECTOR CLEARED or GAME OVER — retry keeps your character/level choice, or press **M** to return to the main menu and pick again.
 - Your best score is saved per sector and overall (`localStorage`) — shown on the level cards and called out with a "NEW BEST!" banner on Game Over. All sound is synthesized live (WebAudio oscillators/noise, no audio files); click the speaker icon (top-right) to mute, which also persists.
-- Clearing a sector pays out coins (50 × its difficulty tier — 50/100/150 for Alpha/Beta/Gamma), persisted alongside your best scores and shown as a running total on the main menu. Dying doesn't pay out — only clearing does.
+- Clearing a sector pays out coins (50 × its difficulty tier — 50/100/150 for Alpha/Beta/Gamma), persisted alongside your best scores and shown as a running total on the main menu and the laser select screen. Dying doesn't pay out — only clearing does. Spend coins on the Laser Select screen to permanently unlock the pricier weapons.
 
 ## Development
 

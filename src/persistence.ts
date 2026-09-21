@@ -75,3 +75,40 @@ export function addCoins(amount: number): number {
   }
   return total;
 }
+
+/** Deducts coins if the balance covers it. Returns false (no-op) otherwise. */
+export function spendCoins(amount: number): boolean {
+  if (getCoins() < amount) return false;
+  addCoins(-amount);
+  return true;
+}
+
+const UNLOCKED_LASERS_KEY = "spaceDefender.unlockedLasers.v1";
+
+function loadUnlockedLasers(): Set<string> {
+  try {
+    const raw = localStorage.getItem(UNLOCKED_LASERS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveUnlockedLasers(ids: Set<string>): void {
+  try {
+    localStorage.setItem(UNLOCKED_LASERS_KEY, JSON.stringify([...ids]));
+  } catch {
+    // unlock just won't persist this session
+  }
+}
+
+export function isLaserUnlocked(laserId: string, coinCost: number): boolean {
+  return coinCost <= 0 || loadUnlockedLasers().has(laserId);
+}
+
+export function unlockLaser(laserId: string): void {
+  const ids = loadUnlockedLasers();
+  ids.add(laserId);
+  saveUnlockedLasers(ids);
+}
