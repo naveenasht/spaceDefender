@@ -10,6 +10,8 @@ import {
   LASER_SPEED,
   LASERS,
   LEVELS,
+  OVERCHARGE_DAMAGE_MULT,
+  OVERCHARGE_DURATION_MS,
   POWERUP_SLOTS,
   SCORE,
   type CharacterDef,
@@ -63,6 +65,7 @@ export class GameScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private ammoText!: Phaser.GameObjects.Text;
   private rapidFireText!: Phaser.GameObjects.Text;
+  private overchargeText!: Phaser.GameObjects.Text;
   private healthBarFill!: Phaser.GameObjects.Rectangle;
   private healthBarFlash!: Phaser.GameObjects.Rectangle;
   private healthBarWidth = 150;
@@ -190,9 +193,10 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.playerLasers, this.enemies, (laserObj, enemyObj) => {
       const laser = laserObj as Phaser.Physics.Arcade.Image;
       const enemy = enemyObj as Enemy;
+      const dmg = laser.getData("damage") as number;
       if (!this.registerLaserHit(laser, enemy)) return;
       audio.enemyHit();
-      const died = enemy.applyDamage(laser.getData("damage") as number);
+      const died = enemy.applyDamage(dmg);
       if (died) this.killEnemy(enemy);
     });
 
@@ -235,6 +239,10 @@ export class GameScene extends Phaser.Scene {
 
     this.rapidFireText = this.add
       .text(16, 40, "", { fontFamily: "monospace", fontSize: "13px", color: "#ffcf5c" })
+      .setDepth(20);
+
+    this.overchargeText = this.add
+      .text(16, 58, "", { fontFamily: "monospace", fontSize: "13px", color: "#ff3d5c" })
       .setDepth(20);
 
     this.buildHealthBar();
@@ -372,6 +380,13 @@ export class GameScene extends Phaser.Scene {
       this.rapidFireText.setVisible(false);
     }
 
+    if (this.player.isOvercharged) {
+      const secondsLeft = Math.max(0, Math.ceil((this.player.overchargeUntil - this.time.now) / 1000));
+      this.overchargeText.setText(`OVERCHARGE ${secondsLeft}s`).setVisible(true);
+    } else {
+      this.overchargeText.setVisible(false);
+    }
+
     for (let i = 0; i < POWERUP_SLOTS; i++) {
       const type = this.player.powerups[i];
       if (type === this.slotTypes[i]) continue; // unchanged — skip the churn
@@ -383,7 +398,13 @@ export class GameScene extends Phaser.Scene {
       }
       if (type) {
         const tex =
-          type === "bomb" ? "bombPickup" : type === "shield" ? "shieldPickup" : "rapidFireIcon";
+          type === "bomb"
+            ? "bombPickup"
+            : type === "shield"
+              ? "shieldPickup"
+              : type === "overcharge"
+                ? "powerPickup"
+                : "rapidFireIcon";
         const box = this.slotBoxes[i];
         this.slotIcons[i] = this.add
           .image(box.x, box.y, tex)
@@ -460,11 +481,13 @@ export class GameScene extends Phaser.Scene {
       const laser = this.playerLasers.create(spawnX, spawnY, laserDef.texture) as Phaser.Physics.Arcade.Image;
       laser.setRotation(angle);
       laser.setDepth(2);
+      const overcharged = this.player.isOvercharged;
       laser.setData("pierceLeft", laserDef.pierceCount);
       laser.setData("hitSet", new Set());
-      laser.setData("damage", laserDef.damage);
+      laser.setData("damage", overcharged ? laserDef.damage * OVERCHARGE_DAMAGE_MULT : laserDef.damage);
       laser.setData("homing", laserDef.homing);
-      if (this.player.isRapidFire) laser.setTint(0xffcf5c);
+      if (overcharged) laser.setTint(0xff3d5c);
+      else if (this.player.isRapidFire) laser.setTint(0xffcf5c);
       this.physics.velocityFromRotation(angle, LASER_SPEED, laser.body!.velocity);
       this.time.delayedCall(1500, () => laser.active && laser.destroy());
     }
@@ -515,9 +538,10 @@ export class GameScene extends Phaser.Scene {
     if (this.gameOver) return;
     const roll = Math.random();
     let kind: PickupKind = "ammo";
-    if (roll > 0.85) kind = "shield";
-    else if (roll > 0.65) kind = "random";
-    else if (roll > 0.5) kind = "bomb";
+    if (roll > 0.88) kind = "power";
+    else if (roll > 0.73) kind = "shield";
+    else if (roll > 0.55) kind = "random";
+    else if (roll > 0.4) kind = "bomb";
 
     const margin = 30;
     const x = Phaser.Math.Between(margin, GAME_WIDTH - margin);
@@ -548,9 +572,10 @@ export class GameScene extends Phaser.Scene {
         (laserObj, bossObj) => {
           const laser = laserObj as Phaser.Physics.Arcade.Image;
           const boss = bossObj as Boss;
+          const dmg = laser.getData("damage") as number;
           if (!this.registerLaserHit(laser, boss)) return;
           audio.enemyHit();
-          const died = boss.applyDamage(laser.getData("damage") as number);
+          const died = boss.applyDamage(dmg);
           this.refreshHud();
           if (died) this.killBoss();
         }
@@ -645,7 +670,7 @@ export class GameScene extends Phaser.Scene {
       );
     }
 
-    const kinds: PickupKind[] = ["shield", "bomb", "random", "ammo"];
+    const kinds: PickupKind[] = ["shield", "bomb", "random", "ammo", "power"];
     for (let i = 0; i < 3; i++) {
       const kind = Phaser.Utils.Array.GetRandom(kinds);
       const drop = new Pickup(this, boss.x + (i - 1) * 40, boss.y, kind);
@@ -673,7 +698,7 @@ export class GameScene extends Phaser.Scene {
     if (mode !== "noscore") {
       this.score += enemy.scoreValue;
       if (enemy.kind === "extra") {
-        const kinds: PickupKind[] = ["ammo", "shield", "bomb", "random"];
+        const kinds: PickupKind[] = ["ammo", "shield", "bomb", "random", "power"];
         const kind = Phaser.Utils.Array.GetRandom(kinds);
         const drop = new Pickup(this, enemy.x, enemy.y, kind);
         this.pickups.add(drop);
@@ -710,13 +735,18 @@ export class GameScene extends Phaser.Scene {
       case "shield":
         this.player.addPowerup(kind);
         break;
+      case "power":
+        this.player.addPowerup("overcharge");
+        break;
       case "random": {
         const roll = Math.random();
-        if (roll < 0.35) {
+        if (roll < 0.3) {
           this.player.addAmmo(AMMO_BURST_AMOUNT);
-        } else if (roll < 0.6) {
+        } else if (roll < 0.5) {
           this.player.addPowerup("rapidFire");
-        } else if (roll < 0.8) {
+        } else if (roll < 0.65) {
+          this.player.addPowerup("overcharge");
+        } else if (roll < 0.85) {
           this.player.addPowerup("shield");
         } else {
           this.player.addPowerup("bomb");
@@ -742,6 +772,8 @@ export class GameScene extends Phaser.Scene {
       this.player.activateShield();
     } else if (type === "rapidFire") {
       this.player.activateRapidFire(RAPID_FIRE_DURATION_MS);
+    } else if (type === "overcharge") {
+      this.player.activateOvercharge(OVERCHARGE_DURATION_MS);
     }
     this.refreshHud();
   }

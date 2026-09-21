@@ -15,8 +15,10 @@ export const POWERUP_SLOTS = 4;
 export const SHIELD_DURATION_MS = 5000;
 export const AMMO_PACK_AMOUNT = 50;
 export const AMMO_BURST_AMOUNT = 30;
+export const OVERCHARGE_DURATION_MS = 6000;
+export const OVERCHARGE_DAMAGE_MULT = 2;
 
-export type PowerupType = "bomb" | "shield" | "ammoBurst" | "rapidFire";
+export type PowerupType = "bomb" | "shield" | "ammoBurst" | "rapidFire" | "overcharge";
 
 export const SCORE = {
   enemy: 10,

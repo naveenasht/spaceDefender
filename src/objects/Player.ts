@@ -21,6 +21,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   laser: LaserDef;
   powerups: PowerupType[] = [];
   rapidFireUntil = 0;
+  overchargeUntil = 0;
 
   private moveSpeed: number;
   private fireCooldownMs: number;
@@ -60,6 +61,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   get isRapidFire(): boolean {
     return this.scene.time.now < this.rapidFireUntil;
+  }
+
+  get isOvercharged(): boolean {
+    return this.scene.time.now < this.overchargeUntil;
   }
 
   handleMovement(pressed: { up: boolean; down: boolean; left: boolean; right: boolean }): void {
@@ -108,6 +113,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   activateRapidFire(durationMs: number): void {
     this.rapidFireUntil = this.scene.time.now + durationMs;
+  }
+
+  activateOvercharge(durationMs: number): void {
+    this.overchargeUntil = this.scene.time.now + durationMs;
   }
 
   /** Returns true if this hit actually costs a life (i.e. player wasn't protected). */

@@ -1,12 +1,13 @@
 import Phaser from "phaser";
 
-export type PickupKind = "ammo" | "bomb" | "random" | "shield";
+export type PickupKind = "ammo" | "bomb" | "random" | "shield" | "power";
 
 const TEXTURE_BY_KIND: Record<PickupKind, string> = {
   ammo: "ammoPickup",
   bomb: "bombPickup",
   random: "randomPickup",
   shield: "shieldPickup",
+  power: "powerPickup",
 };
 
 export class Pickup extends Phaser.Physics.Arcade.Sprite {
@@ -22,7 +23,7 @@ export class Pickup extends Phaser.Physics.Arcade.Sprite {
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(this.width * 0.9, this.height * 0.9);
 
-    if (kind === "bomb" || kind === "random") {
+    if (kind === "bomb" || kind === "random" || kind === "power") {
       scene.tweens.add({
         targets: this,
         angle: 360,
