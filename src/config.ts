@@ -40,6 +40,8 @@ export interface CharacterDef {
   fireCooldownMult: number;
   livesDelta: number;
   ammoMult: number;
+  /** Coins required to unlock this ship; 0 means available from the start. */
+  coinCost: number;
 }
 
 export const CHARACTERS: CharacterDef[] = [
@@ -54,6 +56,7 @@ export const CHARACTERS: CharacterDef[] = [
     fireCooldownMult: 1,
     livesDelta: 0,
     ammoMult: 1,
+    coinCost: 0,
   },
   {
     id: "vanguard",
@@ -66,6 +69,7 @@ export const CHARACTERS: CharacterDef[] = [
     fireCooldownMult: 1.3,
     livesDelta: 1,
     ammoMult: 1.2,
+    coinCost: 100,
   },
   {
     id: "striker",
@@ -78,6 +82,7 @@ export const CHARACTERS: CharacterDef[] = [
     fireCooldownMult: 0.7,
     livesDelta: -1,
     ammoMult: 0.8,
+    coinCost: 150,
   },
 ];
 

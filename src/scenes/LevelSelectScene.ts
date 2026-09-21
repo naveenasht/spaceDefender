@@ -67,6 +67,14 @@ export class LevelSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    this.add
+      .text(16, 16, "← MENU", { fontFamily: "monospace", fontSize: "13px", color: "#9fb3c8" })
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        this.scene.start("Menu");
+      });
+
     const totalWidth = LEVELS.length * CARD_WIDTH + (LEVELS.length - 1) * CARD_GAP;
     const startX = GAME_WIDTH / 2 - totalWidth / 2;
 

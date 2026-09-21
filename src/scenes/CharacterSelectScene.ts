@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH, PLAYER_START_LIVES, type CharacterDef } from "../config";
 import { audio } from "../audio";
+import { getCoins, isCharacterUnlocked, spendCoins, unlockCharacter } from "../persistence";
 
 const CARD_WIDTH = 200;
 const CARD_HEIGHT = 340;
@@ -28,6 +29,8 @@ function statsFor(character: CharacterDef): StatRow[] {
 export class CharacterSelectScene extends Phaser.Scene {
   private selectedIndex = 0;
   private panels: Phaser.GameObjects.Rectangle[] = [];
+  private cardExtras: Phaser.GameObjects.GameObject[] = [];
+  private coinsText!: Phaser.GameObjects.Text;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
   private keyEnter!: Phaser.Input.Keyboard.Key;
@@ -41,6 +44,7 @@ export class CharacterSelectScene extends Phaser.Scene {
   create(): void {
     this.selectedIndex = 0;
     this.panels = [];
+    this.cardExtras = [];
     this.cameras.main.setBackgroundColor(0x05070d);
 
     for (let i = 0; i < 60; i++) {
@@ -59,16 +63,27 @@ export class CharacterSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const totalWidth = CHARACTERS.length * CARD_WIDTH + (CHARACTERS.length - 1) * CARD_GAP;
-    const startX = GAME_WIDTH / 2 - totalWidth / 2;
+    this.add
+      .text(16, 16, "← MENU", { fontFamily: "monospace", fontSize: "13px", color: "#9fb3c8" })
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        this.scene.start("Menu");
+      });
 
-    CHARACTERS.forEach((character, i) => {
-      const cx = startX + i * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2;
-      this.buildCard(character, i, cx);
-    });
+    this.add.image(GAME_WIDTH - 90, 24, "coinIcon").setScale(0.85);
+    this.coinsText = this.add
+      .text(GAME_WIDTH - 76, 24, `${getCoins()}`, {
+        fontFamily: "monospace",
+        fontSize: "15px",
+        color: "#ffd54d",
+      })
+      .setOrigin(0, 0.5);
+
+    this.buildCards();
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 34, "←/→ SELECT   ENTER OR CLICK TO CONFIRM   BACKSPACE: BACK", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT - 34, "←/→ SELECT   ENTER OR CLICK TO CONFIRM/UNLOCK   BACKSPACE: BACK", {
         fontFamily: "monospace",
         fontSize: "13px",
         color: "#9fb3c8",
@@ -101,8 +116,24 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.highlight();
   }
 
+  private buildCards(): void {
+    this.panels.forEach((panel) => panel.destroy());
+    this.panels = [];
+    this.cardExtras.forEach((obj) => obj.destroy());
+    this.cardExtras = [];
+
+    const totalWidth = CHARACTERS.length * CARD_WIDTH + (CHARACTERS.length - 1) * CARD_GAP;
+    const startX = GAME_WIDTH / 2 - totalWidth / 2;
+
+    CHARACTERS.forEach((character, i) => {
+      const cx = startX + i * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2;
+      this.buildCard(character, i, cx);
+    });
+  }
+
   private buildCard(character: CharacterDef, index: number, cx: number): void {
     const cy = CARD_TOP + CARD_HEIGHT / 2;
+    const locked = !isCharacterUnlocked(character.id, character.coinCost);
 
     const panel = this.add
       .rectangle(cx, cy, CARD_WIDTH, CARD_HEIGHT, 0x0b1626, 0.85)
@@ -120,32 +151,37 @@ export class CharacterSelectScene extends Phaser.Scene {
       this.confirm();
     });
 
-    this.add
-      .image(cx, CARD_TOP + 55, character.texture)
-      .setScale(1.7)
-      .setAngle(-90)
-      .setDepth(2);
+    const icon = this.add.image(cx, CARD_TOP + 55, character.texture).setScale(1.7).setAngle(-90).setDepth(2);
+    this.cardExtras.push(icon);
+    if (locked) {
+      icon.setTint(0x4a5568).setAlpha(0.5);
+      this.cardExtras.push(this.add.image(cx, CARD_TOP + 55, "lockIcon").setScale(1.3).setDepth(3));
+    }
 
-    this.add
-      .text(cx, CARD_TOP + 108, character.name.toUpperCase(), {
-        fontFamily: "monospace",
-        fontSize: "16px",
-        color: Phaser.Display.Color.IntegerToColor(character.color).rgba,
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5)
-      .setDepth(2);
+    this.cardExtras.push(
+      this.add
+        .text(cx, CARD_TOP + 108, character.name.toUpperCase(), {
+          fontFamily: "monospace",
+          fontSize: "16px",
+          color: locked ? "#5a6b80" : Phaser.Display.Color.IntegerToColor(character.color).rgba,
+          fontStyle: "bold",
+        })
+        .setOrigin(0.5)
+        .setDepth(2)
+    );
 
-    this.add
-      .text(cx, CARD_TOP + 132, character.tagline, {
-        fontFamily: "monospace",
-        fontSize: "11px",
-        color: "#9fb3c8",
-        align: "center",
-        wordWrap: { width: CARD_WIDTH - 24 },
-      })
-      .setOrigin(0.5, 0)
-      .setDepth(2);
+    this.cardExtras.push(
+      this.add
+        .text(cx, CARD_TOP + 132, character.tagline, {
+          fontFamily: "monospace",
+          fontSize: "11px",
+          color: "#9fb3c8",
+          align: "center",
+          wordWrap: { width: CARD_WIDTH - 24 },
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(2)
+    );
 
     const statStartY = CARD_TOP + 190;
     const rowHeight = 30;
@@ -154,37 +190,60 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     statsFor(character).forEach((stat, row) => {
       const y = statStartY + row * rowHeight;
-      this.add
-        .text(cx - CARD_WIDTH / 2 + 16, y, stat.label, {
-          fontFamily: "monospace",
-          fontSize: "11px",
-          color: "#6f88a3",
-        })
-        .setOrigin(0, 0.5)
-        .setDepth(2);
+      this.cardExtras.push(
+        this.add
+          .text(cx - CARD_WIDTH / 2 + 16, y, stat.label, {
+            fontFamily: "monospace",
+            fontSize: "11px",
+            color: "#6f88a3",
+          })
+          .setOrigin(0, 0.5)
+          .setDepth(2)
+      );
 
-      this.add
-        .rectangle(barX, y, barWidth, 8, 0x081018, 1)
-        .setOrigin(0, 0.5)
-        .setStrokeStyle(1, 0x2f4b6b)
-        .setDepth(2);
+      this.cardExtras.push(
+        this.add
+          .rectangle(barX, y, barWidth, 8, 0x081018, 1)
+          .setOrigin(0, 0.5)
+          .setStrokeStyle(1, 0x2f4b6b)
+          .setDepth(2)
+      );
 
-      this.add
-        .rectangle(barX + 1, y, Math.max(2, (barWidth - 2) * stat.fraction), 6, character.color, 1)
-        .setOrigin(0, 0.5)
-        .setDepth(3);
+      this.cardExtras.push(
+        this.add
+          .rectangle(barX + 1, y, Math.max(2, (barWidth - 2) * stat.fraction), 6, character.color, 1)
+          .setOrigin(0, 0.5)
+          .setDepth(3)
+      );
     });
 
     if (character.livesDelta !== 0) {
       const sign = character.livesDelta > 0 ? "+" : "";
-      this.add
-        .text(cx, CARD_TOP + CARD_HEIGHT - 20, `${sign}${character.livesDelta} LIFE  (${PLAYER_START_LIVES + character.livesDelta} TOTAL)`, {
-          fontFamily: "monospace",
-          fontSize: "10px",
-          color: character.livesDelta > 0 ? "#4dffa0" : "#ff5d5d",
-        })
-        .setOrigin(0.5)
-        .setDepth(2);
+      this.cardExtras.push(
+        this.add
+          .text(cx, CARD_TOP + CARD_HEIGHT - 20, `${sign}${character.livesDelta} LIFE  (${PLAYER_START_LIVES + character.livesDelta} TOTAL)`, {
+            fontFamily: "monospace",
+            fontSize: "10px",
+            color: character.livesDelta > 0 ? "#4dffa0" : "#ff5d5d",
+          })
+          .setOrigin(0.5)
+          .setDepth(2)
+      );
+    }
+
+    if (locked) {
+      const canAfford = getCoins() >= character.coinCost;
+      this.cardExtras.push(
+        this.add
+          .text(cx, CARD_TOP + CARD_HEIGHT + 22, `UNLOCK: ${character.coinCost} COINS`, {
+            fontFamily: "monospace",
+            fontSize: "12px",
+            color: canAfford ? "#ffd54d" : "#6f88a3",
+            fontStyle: "bold",
+          })
+          .setOrigin(0.5)
+          .setDepth(2)
+      );
     }
   }
 
@@ -205,7 +264,22 @@ export class CharacterSelectScene extends Phaser.Scene {
 
   private confirm(): void {
     const character = CHARACTERS[this.selectedIndex];
-    audio.uiConfirm();
-    this.scene.start("LaserSelect", { characterId: character.id });
+
+    if (isCharacterUnlocked(character.id, character.coinCost)) {
+      audio.uiConfirm();
+      this.scene.start("LaserSelect", { characterId: character.id });
+      return;
+    }
+
+    if (spendCoins(character.coinCost)) {
+      unlockCharacter(character.id);
+      audio.purchase();
+      this.coinsText.setText(`${getCoins()}`);
+      this.buildCards();
+      this.highlight();
+    } else {
+      audio.denied();
+      this.cameras.main.shake(200, 0.006);
+    }
   }
 }

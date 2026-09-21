@@ -83,32 +83,42 @@ export function spendCoins(amount: number): boolean {
   return true;
 }
 
-const UNLOCKED_LASERS_KEY = "spaceDefender.unlockedLasers.v1";
-
-function loadUnlockedLasers(): Set<string> {
-  try {
-    const raw = localStorage.getItem(UNLOCKED_LASERS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return new Set(Array.isArray(parsed) ? parsed : []);
-  } catch {
-    return new Set();
+/** A persisted set of unlocked ids, keyed by a coin-purchase item's own id. */
+function createUnlockStore(storageKey: string) {
+  function load(): Set<string> {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      return new Set();
+    }
   }
-}
 
-function saveUnlockedLasers(ids: Set<string>): void {
-  try {
-    localStorage.setItem(UNLOCKED_LASERS_KEY, JSON.stringify([...ids]));
-  } catch {
-    // unlock just won't persist this session
+  function save(ids: Set<string>): void {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify([...ids]));
+    } catch {
+      // unlock just won't persist this session
+    }
   }
+
+  return {
+    isUnlocked(id: string, coinCost: number): boolean {
+      return coinCost <= 0 || load().has(id);
+    },
+    unlock(id: string): void {
+      const ids = load();
+      ids.add(id);
+      save(ids);
+    },
+  };
 }
 
-export function isLaserUnlocked(laserId: string, coinCost: number): boolean {
-  return coinCost <= 0 || loadUnlockedLasers().has(laserId);
-}
+const laserUnlocks = createUnlockStore("spaceDefender.unlockedLasers.v1");
+export const isLaserUnlocked = laserUnlocks.isUnlocked;
+export const unlockLaser = laserUnlocks.unlock;
 
-export function unlockLaser(laserId: string): void {
-  const ids = loadUnlockedLasers();
-  ids.add(laserId);
-  saveUnlockedLasers(ids);
-}
+const characterUnlocks = createUnlockStore("spaceDefender.unlockedCharacters.v1");
+export const isCharacterUnlocked = characterUnlocks.isUnlocked;
+export const unlockCharacter = characterUnlocks.unlock;
