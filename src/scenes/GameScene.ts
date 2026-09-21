@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import {
   AMMO_BURST_AMOUNT,
   AMMO_PACK_AMOUNT,
-  BOSS_LASER_SPEED,
   CHARACTERS,
   ENEMY_LASER_SPEED,
   GAME_HEIGHT,
@@ -13,7 +12,6 @@ import {
   OVERCHARGE_DAMAGE_MULT,
   OVERCHARGE_DURATION_MS,
   POWERUP_SLOTS,
-  SCORE,
   type CharacterDef,
   type LaserDef,
   type LevelDef,
@@ -22,16 +20,10 @@ import {
 import { Player } from "../objects/Player";
 import { Enemy, type EnemyKind } from "../objects/Enemy";
 import { Pickup, type PickupKind } from "../objects/Pickup";
-import { Boss } from "../objects/Boss";
 import { VirtualJoystick } from "../objects/VirtualJoystick";
 import { recordScore } from "../persistence";
 import { audio } from "../audio";
 
-const BOSS_VOLLEY_COUNT = 5;
-const BOSS_VOLLEY_SPREAD_DEG = 55;
-const BOSS_BEAM_SPEED = 520;
-const BOSS_BEAM_TELEGRAPH_MS = 450;
-const BOSS_BEAM_EVERY_NTH_ATTACK = 3;
 const HOMING_TURN_RATE = 4.5; // radians/sec
 
 const RAPID_FIRE_DURATION_MS = 6000;
@@ -76,19 +68,6 @@ export class GameScene extends Phaser.Scene {
   private slotIcons: (Phaser.GameObjects.Image | null)[] = [];
   private slotTypes: (PowerupType | undefined)[] = [];
 
-  private enemySpawnTimer!: Phaser.Time.TimerEvent;
-  private pickupSpawnTimer!: Phaser.Time.TimerEvent;
-  private boss: Boss | null = null;
-  private bossActive = false;
-  private bossThreshold = 0;
-  private bossesDefeated = 0;
-  private bossLaserOverlap?: Phaser.Physics.Arcade.Collider;
-  private bossPlayerOverlap?: Phaser.Physics.Arcade.Collider;
-  private bossNameText!: Phaser.GameObjects.Text;
-  private bossBarBg!: Phaser.GameObjects.Rectangle;
-  private bossBarFill!: Phaser.GameObjects.Rectangle;
-  private bossBarWidth = 340;
-  private bossBarHeight = 14;
   private muteButton!: Phaser.GameObjects.Image;
 
   private touchControls = false;
@@ -114,12 +93,6 @@ export class GameScene extends Phaser.Scene {
     this.score = 0;
     this.elapsedMs = 0;
     this.gameOver = false;
-    this.boss = null;
-    this.bossActive = false;
-    this.bossesDefeated = 0;
-    this.bossThreshold = this.level.bossScoreThreshold;
-    this.bossLaserOverlap = undefined;
-    this.bossPlayerOverlap = undefined;
 
     // Phaser reuses this Scene instance across scene.start("Game", ...) calls
     // (every retry), but these plain-array fields are only initialized once
@@ -134,8 +107,8 @@ export class GameScene extends Phaser.Scene {
 
     // One pooled emitter reused for every explosion, rather than spawning a
     // fresh batch of Image + Tween objects per kill — mass-kill moments
-    // (bomb power-up, boss defeat) used to allocate hundreds of those at
-    // once and visibly stall a frame.
+    // (e.g. the bomb power-up) used to allocate hundreds of those at once
+    // and visibly stall a frame.
     this.explosionEmitter = this.add
       .particles(0, 0, "spark", {
         lifespan: 300,
@@ -169,12 +142,12 @@ export class GameScene extends Phaser.Scene {
 
     this.touchControls = this.sys.game.device.input.touch;
 
-    this.enemySpawnTimer = this.time.addEvent({
+    this.time.addEvent({
       delay: this.level.enemySpawnMs,
       loop: true,
       callback: () => this.spawnEnemy(),
     });
-    this.pickupSpawnTimer = this.time.addEvent({
+    this.time.addEvent({
       delay: this.level.pickupSpawnMs,
       loop: true,
       callback: () => this.spawnPickup(),
@@ -270,7 +243,6 @@ export class GameScene extends Phaser.Scene {
       .setDepth(20);
 
     this.buildHealthBar();
-    this.buildBossBar();
 
     const slotSize = 34;
     const totalWidth = POWERUP_SLOTS * (slotSize + 8) - 8;
@@ -384,37 +356,6 @@ export class GameScene extends Phaser.Scene {
       .setDepth(22);
   }
 
-  private buildBossBar(): void {
-    const barX = GAME_WIDTH / 2 - this.bossBarWidth / 2;
-    const barY = 54;
-
-    this.bossNameText = this.add
-      .text(GAME_WIDTH / 2, barY - 14, "", {
-        fontFamily: "monospace",
-        fontSize: "12px",
-        color: "#ff9ad6",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5)
-      .setDepth(20)
-      .setVisible(false);
-
-    const bg = this.add
-      .rectangle(barX, barY, this.bossBarWidth, this.bossBarHeight, 0x0b1626, 0.85)
-      .setOrigin(0, 0.5)
-      .setStrokeStyle(2, 0x6b2f52)
-      .setDepth(20)
-      .setVisible(false);
-
-    this.bossBarFill = this.add
-      .rectangle(barX + 2, barY, this.bossBarWidth - 4, this.bossBarHeight - 4, 0xff4dc4)
-      .setOrigin(0, 0.5)
-      .setDepth(21)
-      .setVisible(false);
-
-    this.bossBarBg = bg;
-  }
-
   private refreshHud(): void {
     this.ammoText.setText(`AMMO: ${Math.max(0, this.player.ammo)}`);
     this.scoreText.setText(`SCORE: ${this.score}`);
@@ -477,49 +418,6 @@ export class GameScene extends Phaser.Scene {
       }
       this.slotTypes[i] = type;
     }
-
-    if (this.boss) {
-      const fraction = Phaser.Math.Clamp(this.boss.hp / this.boss.maxHp, 0, 1);
-      this.bossBarFill.setSize(
-        Math.max(0, (this.bossBarWidth - 4) * fraction),
-        this.bossBarHeight - 4
-      );
-    }
-  }
-
-  private showBossBar(): void {
-    if (!this.boss) return;
-    this.bossNameText.setText(this.boss.bossName.toUpperCase()).setVisible(true);
-    this.bossBarBg.setVisible(true);
-    this.bossBarFill.setVisible(true);
-  }
-
-  private hideBossBar(): void {
-    this.bossNameText.setVisible(false);
-    this.bossBarBg.setVisible(false);
-    this.bossBarFill.setVisible(false);
-  }
-
-  private showBanner(text: string, color: string): void {
-    const banner = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.36, text, {
-        fontFamily: "monospace",
-        fontSize: "28px",
-        color,
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5)
-      .setDepth(30)
-      .setAlpha(0);
-
-    this.tweens.add({
-      targets: banner,
-      alpha: 1,
-      duration: 200,
-      yoyo: true,
-      hold: 900,
-      onComplete: () => banner.destroy(),
-    });
   }
 
   private fireLaser(): void {
@@ -571,11 +469,6 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    if (this.boss && this.boss.active) {
-      const dist = Phaser.Math.Distance.Between(x, y, this.boss.x, this.boss.y);
-      if (dist < nearestDist) nearest = this.boss;
-    }
-
     return nearest;
   }
 
@@ -612,149 +505,6 @@ export class GameScene extends Phaser.Scene {
     const pickup = new Pickup(this, x, -20, kind);
     this.pickups.add(pickup);
     pickup.launch();
-  }
-
-  private spawnBoss(): void {
-    this.bossActive = true;
-    this.enemySpawnTimer.paused = true;
-    this.pickupSpawnTimer.paused = true;
-    audio.bossIncoming();
-    this.showBanner(`${this.level.bossName.toUpperCase()} INCOMING`, "#ff4dc4");
-
-    this.time.delayedCall(1400, () => {
-      if (this.gameOver) return;
-      const hp = this.level.bossHp + this.bossesDefeated * 25;
-      this.boss = new Boss(this, GAME_WIDTH / 2, -80, {
-        name: this.level.bossName,
-        hp,
-        fireCooldownMs: this.level.bossFireCooldownMs,
-      });
-
-      this.bossLaserOverlap = this.physics.add.overlap(
-        this.playerLasers,
-        this.boss,
-        (laserObj, bossObj) => {
-          const laser = laserObj as Phaser.Physics.Arcade.Image;
-          const boss = bossObj as Boss;
-          const dmg = laser.getData("damage") as number;
-          if (!this.registerLaserHit(laser, boss)) return;
-          audio.enemyHit();
-          const died = boss.applyDamage(dmg);
-          this.refreshHud();
-          if (died) this.killBoss();
-        }
-      );
-      this.bossPlayerOverlap = this.physics.add.overlap(this.player, this.boss, () => {
-        if (this.player.takeHit()) {
-          audio.playerHit();
-          this.checkGameOver();
-        }
-      });
-
-      this.showBossBar();
-    });
-  }
-
-  private fireBossVolley(): void {
-    if (!this.boss) return;
-    const baseAngle = Phaser.Math.Angle.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
-    for (let i = 0; i < BOSS_VOLLEY_COUNT; i++) {
-      const offsetDeg =
-        -BOSS_VOLLEY_SPREAD_DEG / 2 + (BOSS_VOLLEY_SPREAD_DEG / (BOSS_VOLLEY_COUNT - 1)) * i;
-      const angle = baseAngle + Phaser.Math.DegToRad(offsetDeg);
-      const laser = this.enemyLasers.create(
-        this.boss.x,
-        this.boss.y + 20,
-        "bossLaser"
-      ) as Phaser.Physics.Arcade.Image;
-      laser.setRotation(angle);
-      laser.setDepth(2);
-      this.physics.velocityFromRotation(angle, BOSS_LASER_SPEED, laser.body!.velocity);
-    }
-  }
-
-  /** Telegraphs (with an expanding warning ring) then fires a single fast, aimed beam. */
-  private chargeBossBeam(): void {
-    if (!this.boss) return;
-    this.boss.isCharging = true;
-    audio.bossTelegraph();
-
-    // Transparent-fill, thick amber ring: reads as a distinct warning against
-    // both the magenta boss body and the dark background, unlike a filled
-    // circle which just blends into the boss's own glowing core.
-    const warn = this.add
-      .circle(this.boss.x, this.boss.y, 46, 0xffe066, 0)
-      .setStrokeStyle(4, 0xffe066, 0.95)
-      .setDepth(5);
-    this.tweens.add({
-      targets: warn,
-      scale: { from: 0.75, to: 1.5 },
-      alpha: { from: 1, to: 0 },
-      duration: BOSS_BEAM_TELEGRAPH_MS,
-      ease: "Cubic.easeOut",
-      onUpdate: () => {
-        if (this.boss) warn.setPosition(this.boss.x, this.boss.y);
-      },
-      onComplete: () => warn.destroy(),
-    });
-
-    this.time.delayedCall(BOSS_BEAM_TELEGRAPH_MS, () => {
-      if (!this.boss) return;
-      this.boss.isCharging = false;
-      this.fireBossBeam();
-    });
-  }
-
-  private fireBossBeam(): void {
-    if (!this.boss) return;
-    const angle = Phaser.Math.Angle.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
-    const laser = this.enemyLasers.create(
-      this.boss.x,
-      this.boss.y + 20,
-      "bossBeam"
-    ) as Phaser.Physics.Arcade.Image;
-    laser.setRotation(angle);
-    laser.setDepth(2);
-    this.physics.velocityFromRotation(angle, BOSS_BEAM_SPEED, laser.body!.velocity);
-  }
-
-  private killBoss(): void {
-    const boss = this.boss;
-    if (!boss) return;
-    audio.bossDefeated();
-
-    this.score += SCORE.boss + this.bossesDefeated * 100;
-    this.bossesDefeated += 1;
-    this.bossThreshold = this.score + this.level.bossScoreThreshold;
-
-    this.spawnExplosion(boss.x, boss.y);
-    for (let i = 0; i < 3; i++) {
-      this.time.delayedCall(i * 120, () =>
-        this.spawnExplosion(boss.x + Phaser.Math.Between(-30, 30), boss.y + Phaser.Math.Between(-20, 20))
-      );
-    }
-
-    const kinds: PickupKind[] = ["shield", "bomb", "random", "ammo", "power"];
-    for (let i = 0; i < 3; i++) {
-      const kind = Phaser.Utils.Array.GetRandom(kinds);
-      const drop = new Pickup(this, boss.x + (i - 1) * 40, boss.y, kind);
-      this.pickups.add(drop);
-      drop.launch();
-    }
-
-    boss.destroy();
-    this.boss = null;
-    this.bossLaserOverlap?.destroy();
-    this.bossPlayerOverlap?.destroy();
-    this.bossLaserOverlap = undefined;
-    this.bossPlayerOverlap = undefined;
-    this.hideBossBar();
-    this.showBanner(`${this.level.bossName.toUpperCase()} DEFEATED`, "#4dffa0");
-
-    this.bossActive = false;
-    this.enemySpawnTimer.paused = false;
-    this.pickupSpawnTimer.paused = false;
-    this.refreshHud();
   }
 
   private killEnemy(enemy: Enemy, mode?: "noscore"): void {
@@ -816,10 +566,6 @@ export class GameScene extends Phaser.Scene {
     if (type === "bomb") {
       const active = this.enemies.getChildren().slice() as Enemy[];
       for (const enemy of active) this.killEnemy(enemy);
-      if (this.boss) {
-        const died = this.boss.applyDamage(15);
-        if (died) this.killBoss();
-      }
     } else if (type === "shield") {
       this.player.activateShield();
     } else if (type === "rapidFire") {
@@ -882,22 +628,6 @@ export class GameScene extends Phaser.Scene {
       if (this.keySpace.isDown || pointer.isDown) this.fireLaser();
     }
     if (Phaser.Input.Keyboard.JustDown(this.keyF)) this.usePowerup();
-
-    if (!this.bossActive && this.score >= this.bossThreshold) {
-      this.spawnBoss();
-    }
-
-    if (this.boss && this.boss.isPatrolling && !this.boss.isCharging) {
-      if (this.time.now > this.boss.lastFiredAt + this.boss.fireCooldownMs) {
-        this.boss.lastFiredAt = this.time.now;
-        this.boss.attackCount += 1;
-        if (this.boss.attackCount % BOSS_BEAM_EVERY_NTH_ATTACK === 0) {
-          this.chargeBossBeam();
-        } else {
-          this.fireBossVolley();
-        }
-      }
-    }
 
     for (const enemyObj of this.enemies.getChildren()) {
       const enemy = enemyObj as Enemy;

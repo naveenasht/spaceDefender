@@ -77,10 +77,10 @@ class AudioEngine {
     return this.muted;
   }
 
-  private beep(opts: BeepOptions & { startOffset?: number }): void {
+  private beep(opts: BeepOptions): void {
     const ctx = this.ensureContext();
     if (!ctx || !this.masterGain || this.muted) return;
-    const startAt = ctx.currentTime + (opts.startOffset ?? 0);
+    const startAt = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = opts.type ?? "sine";
@@ -136,20 +136,6 @@ class AudioEngine {
 
   powerupUse(): void {
     this.beep({ freq: 660, sweepTo: 990, duration: 0.15, type: "sine", gain: 0.2 });
-  }
-
-  bossIncoming(): void {
-    this.beep({ freq: 140, sweepTo: 140, duration: 0.5, type: "sawtooth", gain: 0.18 });
-  }
-
-  bossTelegraph(): void {
-    this.beep({ freq: 220, sweepTo: 660, duration: 0.4, type: "square", gain: 0.14 });
-  }
-
-  bossDefeated(): void {
-    [440, 660, 880].forEach((freq, i) => {
-      this.beep({ freq, duration: 0.18, type: "triangle", gain: 0.2, startOffset: i * 0.12 });
-    });
   }
 
   gameOver(): void {
