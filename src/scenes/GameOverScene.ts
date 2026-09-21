@@ -57,7 +57,7 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     const prompt = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.66, "PRESS SPACE OR CLICK TO RETRY", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.66, "TAP, CLICK, OR PRESS SPACE TO RETRY", {
         fontFamily: "monospace",
         fontSize: "18px",
         color: "#c9d6e3",
@@ -66,13 +66,20 @@ export class GameOverScene extends Phaser.Scene {
 
     this.tweens.add({ targets: prompt, alpha: 0.2, duration: 650, yoyo: true, repeat: -1 });
 
+    const toMenu = () => this.scene.start("Menu");
+
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.76, "PRESS M FOR MAIN MENU", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.76, "TAP OR PRESS M FOR MAIN MENU", {
         fontFamily: "monospace",
         fontSize: "14px",
         color: "#6f88a3",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        toMenu();
+      });
 
     const retry = () =>
       this.scene.start("Game", {
@@ -83,6 +90,6 @@ export class GameOverScene extends Phaser.Scene {
 
     this.input.keyboard!.once("keydown-SPACE", retry);
     this.input.once("pointerdown", retry);
-    this.input.keyboard!.once("keydown-M", () => this.scene.start("Menu"));
+    this.input.keyboard!.once("keydown-M", toMenu);
   }
 }

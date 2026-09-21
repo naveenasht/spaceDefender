@@ -23,6 +23,7 @@ import { Player } from "../objects/Player";
 import { Enemy, type EnemyKind } from "../objects/Enemy";
 import { Pickup, type PickupKind } from "../objects/Pickup";
 import { Boss } from "../objects/Boss";
+import { VirtualJoystick } from "../objects/VirtualJoystick";
 import { recordScore } from "../persistence";
 import { audio } from "../audio";
 
@@ -90,8 +91,18 @@ export class GameScene extends Phaser.Scene {
   private bossBarHeight = 14;
   private muteButton!: Phaser.GameObjects.Image;
 
+  private touchControls = false;
+  private moveStick?: VirtualJoystick;
+  private aimStick?: VirtualJoystick;
+
   constructor() {
     super("Game");
+  }
+
+  private pauseGame(): void {
+    if (this.gameOver || this.scene.isActive("Pause")) return;
+    this.scene.launch("Pause");
+    this.scene.pause();
   }
 
   create(data: GameSceneData): void {
@@ -137,13 +148,10 @@ export class GameScene extends Phaser.Scene {
     this.keyF = this.input.keyboard!.addKey("F");
     this.keySpace = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
-    const pauseGame = () => {
-      if (this.gameOver || this.scene.isActive("Pause")) return;
-      this.scene.launch("Pause");
-      this.scene.pause();
-    };
-    this.input.keyboard!.addKey("P").on("down", pauseGame);
-    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC).on("down", pauseGame);
+    this.input.keyboard!.addKey("P").on("down", () => this.pauseGame());
+    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC).on("down", () => this.pauseGame());
+
+    this.touchControls = this.sys.game.device.input.touch;
 
     this.enemySpawnTimer = this.time.addEvent({
       delay: this.level.enemySpawnMs,
@@ -273,7 +281,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.muteButton = this.add
-      .image(GAME_WIDTH - 24, GAME_HEIGHT - 24, audio.isMuted() ? "speakerOff" : "speakerOn")
+      .image(GAME_WIDTH - 24, 46, audio.isMuted() ? "speakerOff" : "speakerOn")
       .setInteractive({ useHandCursor: true })
       .setDepth(25);
     this.muteButton.on(
@@ -285,7 +293,47 @@ export class GameScene extends Phaser.Scene {
       }
     );
 
+    if (this.touchControls) {
+      this.buildTouchControls(startX, totalWidth);
+    }
+
     this.refreshHud();
+  }
+
+  private buildTouchControls(slotsStartX: number, slotsTotalWidth: number): void {
+    this.moveStick = new VirtualJoystick(this, 90, GAME_HEIGHT - 100, 50);
+    this.aimStick = new VirtualJoystick(this, GAME_WIDTH - 90, GAME_HEIGHT - 100, 50);
+
+    const pauseButton = this.add
+      .image(GAME_WIDTH - 24, 80, "pauseIcon")
+      .setInteractive({ useHandCursor: true })
+      .setDepth(25);
+    pauseButton.on(
+      "pointerdown",
+      (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        this.pauseGame();
+      }
+    );
+
+    const useX = slotsStartX + slotsTotalWidth + 34;
+    const useY = GAME_HEIGHT - 32;
+    const useBg = this.add
+      .circle(useX, useY, 24, 0x0b1626, 0.7)
+      .setStrokeStyle(2, 0x2f4b6b)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(20);
+    this.add
+      .image(useX, useY, "powerPickup")
+      .setScale(0.7)
+      .setDepth(21);
+    useBg.on(
+      "pointerdown",
+      (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        this.usePowerup();
+      }
+    );
   }
 
   private buildHealthBar(): void {
@@ -808,16 +856,27 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    const pointer = this.input.activePointer;
-    this.player.aimAt(pointer.worldX, pointer.worldY);
-    this.player.handleMovement({
-      up: this.cursors.up!.isDown || this.wasd.W.isDown,
-      down: this.cursors.down!.isDown || this.wasd.S.isDown,
-      left: this.cursors.left!.isDown || this.wasd.A.isDown,
-      right: this.cursors.right!.isDown || this.wasd.D.isDown,
-    });
-
-    if (this.keySpace.isDown || pointer.isDown) this.fireLaser();
+    if (this.touchControls && this.moveStick && this.aimStick) {
+      if (this.moveStick.active && this.moveStick.magnitude > 0.15) {
+        this.player.handleMovementVector(this.moveStick.dx, this.moveStick.dy);
+      } else {
+        this.player.handleMovementVector(0, 0);
+      }
+      if (this.aimStick.active && this.aimStick.magnitude > 0.15) {
+        this.player.aimAtAngle(this.aimStick.angle);
+        this.fireLaser();
+      }
+    } else {
+      const pointer = this.input.activePointer;
+      this.player.aimAt(pointer.worldX, pointer.worldY);
+      this.player.handleMovement({
+        up: this.cursors.up!.isDown || this.wasd.W.isDown,
+        down: this.cursors.down!.isDown || this.wasd.S.isDown,
+        left: this.cursors.left!.isDown || this.wasd.A.isDown,
+        right: this.cursors.right!.isDown || this.wasd.D.isDown,
+      });
+      if (this.keySpace.isDown || pointer.isDown) this.fireLaser();
+    }
     if (Phaser.Input.Keyboard.JustDown(this.keyF)) this.usePowerup();
 
     if (!this.bossActive && this.score >= this.bossThreshold) {

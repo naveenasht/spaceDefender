@@ -9,6 +9,7 @@ A browser-based top-down space shooter built with [Phaser](https://phaser.io/) 4
 - **Fire:** Left click or Space (hold for continuous fire)
 - **Use power-up:** F
 - **Pause:** P or Escape
+- **Mobile/touch:** on any touch device, the desktop controls are replaced by a dual-stick layout — the left stick moves, the right stick aims and fires continuously while held. Tap the diamond button to use a power-up, and the pause icon (top-right) to pause; the pause and game-over screens are also tap-friendly.
 
 ## Gameplay
 
@@ -24,7 +25,7 @@ A browser-based top-down space shooter built with [Phaser](https://phaser.io/) 4
 - Every level has a boss: once your score crosses a threshold, normal spawning pauses, a banner announces it, and a large ship enters with its own HP bar. It only takes damage from your laser (or a chunk from a bomb power-up) — ramming it just hurts you. Defeating it pays a big score bonus, drops several pickups, and resumes normal spawning; the next boss threshold and its HP both scale up.
 - The boss alternates two attacks: a 5-shot spread volley, and every third attack a **beam** — a fast, aimed bolt telegraphed half a second ahead by an expanding amber warning ring, so it's dodgeable if you react to the ring.
 - On Game Over, retry keeps your character/level choice, or press **M** to return to the main menu and pick again.
-- Your best score is saved per sector and overall (`localStorage`) — shown on the level cards and called out with a "NEW BEST!" banner on Game Over. All sound is synthesized live (WebAudio oscillators/noise, no audio files); click the speaker icon (bottom-right in-game, top-right on the menu) to mute, which also persists.
+- Your best score is saved per sector and overall (`localStorage`) — shown on the level cards and called out with a "NEW BEST!" banner on Game Over. All sound is synthesized live (WebAudio oscillators/noise, no audio files); click the speaker icon (top-right) to mute, which also persists.
 
 ## Development
 
@@ -66,10 +67,10 @@ src/
     Enemy.ts                    enemy variants (basic/shooter/extra)
     Boss.ts                      entry/patrol movement, HP
     Pickup.ts                    ammo/bomb/shield/random pickups
+    VirtualJoystick.ts           on-screen thumbstick for touch controls
 ```
 
 ## Possible next steps
 
 - More characters/levels — both are plain data arrays in `config.ts`, so new entries just need a color and stat/weight tuning.
-- Mobile/touch controls.
 - Settings menu (volume slider, key rebinding).

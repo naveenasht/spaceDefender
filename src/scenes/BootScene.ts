@@ -40,6 +40,7 @@ export class BootScene extends Phaser.Scene {
     this.makeParticle();
     this.makeSpeakerIcon("speakerOn", true);
     this.makeSpeakerIcon("speakerOff", false);
+    this.makePauseIcon();
 
     this.scene.start("Menu");
   }
@@ -322,6 +323,17 @@ export class BootScene extends Phaser.Scene {
     }
 
     g.generateTexture(key, w, h);
+    g.destroy();
+  }
+
+  private makePauseIcon(): void {
+    const g = this.add.graphics();
+    const w = 26;
+    const h = 26;
+    g.fillStyle(0xc9d6e3, 1);
+    g.fillRoundedRect(w * 0.22, h * 0.15, w * 0.2, h * 0.7, 2);
+    g.fillRoundedRect(w * 0.58, h * 0.15, w * 0.2, h * 0.7, 2);
+    g.generateTexture("pauseIcon", w, h);
     g.destroy();
   }
 }

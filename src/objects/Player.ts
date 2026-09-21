@@ -80,6 +80,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     body.setVelocity((vx / len) * this.moveSpeed, (vy / len) * this.moveSpeed);
   }
 
+  /** Analog movement from a virtual joystick — vx/vy each in [-1, 1]. */
+  handleMovementVector(vx: number, vy: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const magnitude = Math.min(1, Math.hypot(vx, vy));
+    if (magnitude < 0.05) {
+      body.setVelocity(0, 0);
+      return;
+    }
+    const angle = Math.atan2(vy, vx);
+    body.setVelocity(Math.cos(angle) * this.moveSpeed * magnitude, Math.sin(angle) * this.moveSpeed * magnitude);
+  }
+
+  aimAtAngle(angle: number): void {
+    this.rotation = angle;
+  }
+
   aimAt(pointerX: number, pointerY: number): void {
     this.rotation = Phaser.Math.Angle.Between(this.x, this.y, pointerX, pointerY);
   }
