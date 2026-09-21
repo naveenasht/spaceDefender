@@ -64,6 +64,10 @@ export class GameScene extends Phaser.Scene {
   private healthBarWidth = 150;
   private healthBarHeight = 16;
   private lastLives = 0;
+  private surviveText!: Phaser.GameObjects.Text;
+  private surviveBarFill!: Phaser.GameObjects.Rectangle;
+  private surviveBarWidth = 220;
+  private surviveBarHeight = 10;
   private slotBoxes: Phaser.GameObjects.Rectangle[] = [];
   private slotIcons: (Phaser.GameObjects.Image | null)[] = [];
   private slotTypes: (PowerupType | undefined)[] = [];
@@ -243,6 +247,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(20);
 
     this.buildHealthBar();
+    this.buildSurviveBar();
 
     const slotSize = 34;
     const totalWidth = POWERUP_SLOTS * (slotSize + 8) - 8;
@@ -356,6 +361,31 @@ export class GameScene extends Phaser.Scene {
       .setDepth(22);
   }
 
+  private buildSurviveBar(): void {
+    const barX = GAME_WIDTH / 2 - this.surviveBarWidth / 2;
+    const barY = 54;
+
+    this.surviveText = this.add
+      .text(GAME_WIDTH / 2, barY - 14, "", {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#9fb3c8",
+      })
+      .setOrigin(0.5)
+      .setDepth(20);
+
+    this.add
+      .rectangle(barX, barY, this.surviveBarWidth, this.surviveBarHeight, 0x0b1626, 0.85)
+      .setOrigin(0, 0.5)
+      .setStrokeStyle(2, 0x2f4b6b)
+      .setDepth(20);
+
+    this.surviveBarFill = this.add
+      .rectangle(barX + 2, barY, this.surviveBarWidth - 4, this.surviveBarHeight - 4, 0x4de8ff)
+      .setOrigin(0, 0.5)
+      .setDepth(21);
+  }
+
   private refreshHud(): void {
     this.ammoText.setText(`AMMO: ${Math.max(0, this.player.ammo)}`);
     this.scoreText.setText(`SCORE: ${this.score}`);
@@ -377,6 +407,16 @@ export class GameScene extends Phaser.Scene {
       });
     }
     this.lastLives = lives;
+
+    const surviveFraction = Phaser.Math.Clamp(this.elapsedMs / this.level.survivalTargetMs, 0, 1);
+    this.surviveBarFill.setSize(
+      Math.max(0, (this.surviveBarWidth - 4) * surviveFraction),
+      this.surviveBarHeight - 4
+    );
+    const remainingSec = Math.max(0, Math.ceil((this.level.survivalTargetMs - this.elapsedMs) / 1000));
+    const mm = Math.floor(remainingSec / 60);
+    const ss = (remainingSec % 60).toString().padStart(2, "0");
+    this.surviveText.setText(`SECTOR CLEAR IN ${mm}:${ss}`);
 
     if (this.player.isRapidFire) {
       const secondsLeft = Math.max(0, Math.ceil((this.player.rapidFireUntil - this.time.now) / 1000));
@@ -588,15 +628,38 @@ export class GameScene extends Phaser.Scene {
           characterId: this.character.id,
           laserId: this.laser.id,
           levelId: this.level.id,
+          outcome: "died",
           ...scoreResult,
         });
       });
     }
   }
 
+  /** Surviving the sector's target duration clears it — a win, not a death. */
+  private clearLevel(): void {
+    if (this.gameOver) return;
+    this.gameOver = true;
+    audio.levelCleared();
+    const scoreResult = recordScore(this.level.id, this.score);
+    this.time.delayedCall(400, () => {
+      this.scene.start("GameOver", {
+        score: this.score,
+        characterId: this.character.id,
+        laserId: this.laser.id,
+        levelId: this.level.id,
+        outcome: "cleared",
+        ...scoreResult,
+      });
+    });
+  }
+
   update(_time: number, delta: number): void {
     if (this.gameOver) return;
     this.elapsedMs += delta;
+
+    if (this.elapsedMs >= this.level.survivalTargetMs) {
+      this.clearLevel();
+    }
 
     for (const star of this.stars) {
       star.img.y += (star.speed * delta) / 1000;

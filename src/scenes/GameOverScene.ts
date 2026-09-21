@@ -9,6 +9,7 @@ interface GameOverData {
   levelId?: string;
   isNewOverallBest?: boolean;
   isNewLevelBest?: boolean;
+  outcome?: "died" | "cleared";
 }
 
 export class GameOverScene extends Phaser.Scene {
@@ -18,12 +19,13 @@ export class GameOverScene extends Phaser.Scene {
 
   create(data: GameOverData): void {
     this.cameras.main.setBackgroundColor(0x05070d);
+    const cleared = data.outcome === "cleared";
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.3, "GAME OVER", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.3, cleared ? "SECTOR CLEARED" : "GAME OVER", {
         fontFamily: "monospace",
-        fontSize: "44px",
-        color: "#ff5d5d",
+        fontSize: cleared ? "36px" : "44px",
+        color: cleared ? "#4dffa0" : "#ff5d5d",
         fontStyle: "bold",
       })
       .setOrigin(0.5);

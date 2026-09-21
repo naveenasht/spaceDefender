@@ -208,6 +208,7 @@ export interface LevelDef {
   enemySpawnMs: number;
   pickupSpawnMs: number;
   weights: EnemyWeights;
+  survivalTargetMs: number;
 }
 
 export const LEVELS: LevelDef[] = [
@@ -219,6 +220,7 @@ export const LEVELS: LevelDef[] = [
     enemySpawnMs: 1100,
     pickupSpawnMs: 3800,
     weights: { enemy: 0.75, shooter: 0.2, extra: 0.05 },
+    survivalTargetMs: 90_000,
   },
   {
     id: "beta",
@@ -228,6 +230,7 @@ export const LEVELS: LevelDef[] = [
     enemySpawnMs: 850,
     pickupSpawnMs: 4200,
     weights: { enemy: 0.6, shooter: 0.3, extra: 0.1 },
+    survivalTargetMs: 120_000,
   },
   {
     id: "gamma",
@@ -237,5 +240,6 @@ export const LEVELS: LevelDef[] = [
     enemySpawnMs: 650,
     pickupSpawnMs: 4600,
     weights: { enemy: 0.45, shooter: 0.35, extra: 0.2 },
+    survivalTargetMs: 150_000,
   },
 ];

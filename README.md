@@ -16,13 +16,13 @@ A browser-based top-down space shooter built with [Phaser](https://phaser.io/) 4
 - Flow: **Menu → Character Select → Laser Select → Level Select → Game → Game Over**. Backspace steps back a screen; arrow keys/A-D move the selection, Enter or a click confirms.
 - **Characters** trade off speed, fire rate, lives, and ammo: Interceptor (balanced), Vanguard (tankier, slower), Striker (fast and fragile). Stats are shown as bars on the select screen.
 - **Lasers** — six weapons with real tradeoffs, picked from a chip strip + detail panel showing damage/power/pierce/rate/ammo bars: Pulse (balanced default), Spread (3-way fan, great vs crowds), Piercing (punches through 3 targets), Twin (parallel double-tap, focused single-target DPS), Homing (bolts auto-steer toward the nearest enemy), Heavy Cannon (2x damage per hit, slow fire rate, expensive ammo).
-- **Levels** (Sector Alpha/Beta/Gamma) scale enemy spawn rate and the mix of shooter/elite enemies.
+- **Levels** (Sector Alpha/Beta/Gamma) scale enemy spawn rate and the mix of shooter/elite enemies. Each has a survival-time goal (1:30 / 2:00 / 2:30) shown as a countdown bar under the HULL bar — reach it and the sector clears; run out of lives first and it's Game Over instead.
 - Destroy enemies for score. Basic enemies just drop in; **shooter** enemies (orange) fire lasers back at you; **extra** enemies (purple) are tougher, worth more, and always drop a pickup on death.
 - Ammo is limited — pick up green ammo packs to refill.
 - Bomb, shield, and rapid-fire pickups go into one of your 4 power-up slots; press **F** to use the oldest one in the queue. Bomb clears all on-screen enemies; shield grants temporary invulnerability; rapid fire triples your fire rate for a few seconds.
 - The purple "random item" pickup resolves into an instant ammo burst or one of the above slot power-ups.
 - A HULL bar at the top shows remaining lives (color-coded green/amber/red), with a brief invulnerability window after each hit.
-- On Game Over, retry keeps your character/level choice, or press **M** to return to the main menu and pick again.
+- Either way — SECTOR CLEARED or GAME OVER — retry keeps your character/level choice, or press **M** to return to the main menu and pick again.
 - Your best score is saved per sector and overall (`localStorage`) — shown on the level cards and called out with a "NEW BEST!" banner on Game Over. All sound is synthesized live (WebAudio oscillators/noise, no audio files); click the speaker icon (top-right) to mute, which also persists.
 
 ## Development
