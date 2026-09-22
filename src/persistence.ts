@@ -56,11 +56,16 @@ export function recordScore(levelId: string, score: number): ScoreResult {
 
 const COINS_KEY = "spaceDefender.coins.v1";
 
+/** A one-time welcome grant — only applies while nothing has been saved yet. */
+const STARTING_COINS = 100;
+
 export function getCoins(): number {
   try {
-    return Math.max(0, parseInt(localStorage.getItem(COINS_KEY) ?? "0", 10) || 0);
+    const raw = localStorage.getItem(COINS_KEY);
+    if (raw === null) return STARTING_COINS;
+    return Math.max(0, parseInt(raw, 10) || 0);
   } catch {
-    return 0;
+    return STARTING_COINS;
   }
 }
 

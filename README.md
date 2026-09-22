@@ -24,7 +24,7 @@ A browser-based top-down space shooter built with [Phaser](https://phaser.io/) 4
 - A HULL bar at the top shows remaining lives (color-coded green/amber/red), with a brief invulnerability window after each hit.
 - Either way — SECTOR CLEARED or GAME OVER — retry keeps your character/level choice, or press **M** to return to the main menu and pick again.
 - Your best score is saved per sector and overall (`localStorage`) — shown on the level cards and called out with a "NEW BEST!" banner on Game Over. All sound is synthesized live (WebAudio oscillators/noise, no audio files); click the speaker icon (top-right) to mute, which also persists.
-- Clearing a sector pays out coins (50 × its difficulty tier — 50/100/150 for Alpha/Beta/Gamma), persisted alongside your best scores and shown as a running total on the main menu and the character/laser select screens. Dying doesn't pay out — only clearing does. Spend coins on those two screens to permanently unlock pricier ships and weapons; selecting a locked one spends the coins and unlocks it in place instead of confirming, or shakes the screen with a denied cue if you can't afford it.
+- New players start with a 100-coin welcome grant; after that, clearing a sector pays out coins (50 × its difficulty tier — 50/100/150 for Alpha/Beta/Gamma), persisted alongside your best scores and shown as a running total on the main menu and the character/laser select screens. Dying doesn't pay out — only clearing does. Spend coins on those two screens to permanently unlock pricier ships and weapons; selecting a locked one spends the coins and unlocks it in place instead of confirming, or shakes the screen with a denied cue if you can't afford it.
 
 ## Development
 
