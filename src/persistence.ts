@@ -127,3 +127,31 @@ export const unlockLaser = laserUnlocks.unlock;
 const characterUnlocks = createUnlockStore("spaceDefender.unlockedCharacters.v1");
 export const isCharacterUnlocked = characterUnlocks.isUnlocked;
 export const unlockCharacter = characterUnlocks.unlock;
+
+const LAST_LOADOUT_KEY = "spaceDefender.lastLoadout.v1";
+
+export interface Loadout {
+  characterId: string;
+  laserId: string;
+}
+
+/** The character/laser picked last time a run actually started, if any. */
+export function getLastLoadout(): Loadout | null {
+  try {
+    const raw = localStorage.getItem(LAST_LOADOUT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Loadout>;
+    if (typeof parsed.characterId !== "string" || typeof parsed.laserId !== "string") return null;
+    return { characterId: parsed.characterId, laserId: parsed.laserId };
+  } catch {
+    return null;
+  }
+}
+
+export function saveLastLoadout(characterId: string, laserId: string): void {
+  try {
+    localStorage.setItem(LAST_LOADOUT_KEY, JSON.stringify({ characterId, laserId }));
+  } catch {
+    // won't persist this session
+  }
+}

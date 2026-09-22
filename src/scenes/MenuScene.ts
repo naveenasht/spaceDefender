@@ -1,7 +1,16 @@
 import Phaser from "phaser";
-import { GAME_HEIGHT, GAME_WIDTH } from "../config";
+import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH } from "../config";
 import { audio } from "../audio";
-import { getCoins } from "../persistence";
+import { getCoins, getLastLoadout } from "../persistence";
+
+interface ButtonColors {
+  fill: number;
+  stroke: number;
+  text: string;
+}
+
+const PRIMARY_COLORS: ButtonColors = { fill: 0x0f3a45, stroke: 0x7cf7ff, text: "#7cf7ff" };
+const SECONDARY_COLORS: ButtonColors = { fill: 0x0b1626, stroke: 0x2f4b6b, text: "#c9d6e3" };
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -19,17 +28,17 @@ export class MenuScene extends Phaser.Scene {
     }
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.28, "SPACE DEFENDER", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.19, "SPACE DEFENDER", {
         fontFamily: "monospace",
-        fontSize: "42px",
+        fontSize: "40px",
         color: "#7cf7ff",
         fontStyle: "bold",
       })
       .setOrigin(0.5);
 
     this.add
-      .image(GAME_WIDTH / 2, GAME_HEIGHT * 0.28 + 60, "player")
-      .setScale(1.4)
+      .image(GAME_WIDTH / 2, GAME_HEIGHT * 0.19 + 48, "player")
+      .setScale(1.2)
       .setAngle(-90);
 
     const lines = [
@@ -43,24 +52,14 @@ export class MenuScene extends Phaser.Scene {
     ];
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.52, lines, {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.46, lines, {
         fontFamily: "monospace",
-        fontSize: "16px",
+        fontSize: "15px",
         color: "#c9d6e3",
         align: "center",
-        lineSpacing: 8,
+        lineSpacing: 7,
       })
       .setOrigin(0.5);
-
-    const prompt = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.86, "PRESS SPACE OR CLICK TO START", {
-        fontFamily: "monospace",
-        fontSize: "18px",
-        color: "#ffcf5c",
-      })
-      .setOrigin(0.5);
-
-    this.tweens.add({ targets: prompt, alpha: 0.2, duration: 650, yoyo: true, repeat: -1 });
 
     this.add.image(28, 28, "coinIcon").setScale(1.1);
     this.add
@@ -81,13 +80,103 @@ export class MenuScene extends Phaser.Scene {
       muteButton.setTexture(muted ? "speakerOff" : "speakerOn");
     });
 
-    const start = () => {
+    const enterAudio = () => {
       audio.resume();
       audio.startMusic();
       audio.uiConfirm();
+    };
+
+    const play = () => {
+      enterAudio();
+      const lastLoadout = getLastLoadout();
+      if (lastLoadout) {
+        this.scene.start("LevelSelect", lastLoadout);
+      } else {
+        this.scene.start("CharacterSelect");
+      }
+    };
+
+    const openCharacters = () => {
+      enterAudio();
       this.scene.start("CharacterSelect");
     };
-    this.input.keyboard!.once("keydown-SPACE", start);
-    this.input.once("pointerdown", start);
+
+    const openLasers = () => {
+      enterAudio();
+      const characterId = getLastLoadout()?.characterId ?? CHARACTERS[0].id;
+      this.scene.start("LaserSelect", { characterId });
+    };
+
+    this.buildButton(GAME_WIDTH / 2, GAME_HEIGHT * 0.73, 220, 54, "PLAY", PRIMARY_COLORS, 18, play);
+
+    const secondaryGap = 16;
+    const secondaryWidth = 170;
+    const secondaryY = GAME_HEIGHT * 0.73 + 27 + 14 + 20;
+    const secondaryTotalWidth = secondaryWidth * 2 + secondaryGap;
+    const secondaryStartX = GAME_WIDTH / 2 - secondaryTotalWidth / 2;
+
+    this.buildButton(
+      secondaryStartX + secondaryWidth / 2,
+      secondaryY,
+      secondaryWidth,
+      40,
+      "CHARACTERS",
+      SECONDARY_COLORS,
+      13,
+      openCharacters
+    );
+    this.buildButton(
+      secondaryStartX + secondaryWidth + secondaryGap + secondaryWidth / 2,
+      secondaryY,
+      secondaryWidth,
+      40,
+      "LASERS",
+      SECONDARY_COLORS,
+      13,
+      openLasers
+    );
+
+    this.input.keyboard!.once("keydown-SPACE", play);
+  }
+
+  private buildButton(
+    cx: number,
+    cy: number,
+    width: number,
+    height: number,
+    label: string,
+    colors: ButtonColors,
+    fontSize: number,
+    onClick: () => void
+  ): void {
+    const rect = this.add
+      .rectangle(cx, cy, width, height, colors.fill, 0.9)
+      .setStrokeStyle(2, colors.stroke)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(1);
+
+    const text = this.add
+      .text(cx, cy, label, {
+        fontFamily: "monospace",
+        fontSize: `${fontSize}px`,
+        color: colors.text,
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setDepth(2);
+
+    rect.on("pointerover", () => {
+      this.tweens.add({ targets: [rect, text], scale: 1.05, duration: 100, ease: "Cubic.easeOut" });
+    });
+    rect.on("pointerout", () => {
+      this.tweens.add({ targets: [rect, text], scale: 1, duration: 100, ease: "Cubic.easeOut" });
+    });
+    rect.on(
+      "pointerdown",
+      (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        onClick();
+      }
+    );
   }
 }

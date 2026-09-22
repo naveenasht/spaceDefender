@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { CHARACTERS, GAME_HEIGHT, GAME_WIDTH, LASERS, type LaserDef } from "../config";
 import { audio } from "../audio";
-import { getCoins, isLaserUnlocked, spendCoins, unlockLaser } from "../persistence";
+import { getCoins, isLaserUnlocked, saveLastLoadout, spendCoins, unlockLaser } from "../persistence";
 
 const CHIP_WIDTH = 112;
 const CHIP_HEIGHT = 92;
@@ -333,6 +333,7 @@ export class LaserSelectScene extends Phaser.Scene {
 
     if (isLaserUnlocked(laser.id, laser.coinCost)) {
       audio.uiConfirm();
+      saveLastLoadout(this.characterId, laser.id);
       this.scene.start("LevelSelect", { characterId: this.characterId, laserId: laser.id });
       return;
     }
