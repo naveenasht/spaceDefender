@@ -48,7 +48,7 @@ export class MenuScene extends Phaser.Scene {
       "POWER-UP:  F     PAUSE:  P",
       "",
       "Collect ammo, shields, bombs & random items.",
-      "Shooter enemies fire back — watch your ammo!",
+      "Survive the sector timer to clear it — watch your ammo!",
     ];
 
     this.add

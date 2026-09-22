@@ -4,7 +4,6 @@ import {
   AMMO_PACK_AMOUNT,
   CHARACTERS,
   COINS_PER_DIFFICULTY,
-  ENEMY_LASER_SPEED,
   GAME_HEIGHT,
   GAME_WIDTH,
   LASER_SPEED,
@@ -47,7 +46,6 @@ export class GameScene extends Phaser.Scene {
 
   private enemies!: Phaser.Physics.Arcade.Group;
   private playerLasers!: Phaser.Physics.Arcade.Group;
-  private enemyLasers!: Phaser.Physics.Arcade.Group;
   private pickups!: Phaser.Physics.Arcade.Group;
 
   private stars: { img: Phaser.GameObjects.Image; speed: number }[] = [];
@@ -127,7 +125,6 @@ export class GameScene extends Phaser.Scene {
 
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: true });
     this.playerLasers = this.physics.add.group();
-    this.enemyLasers = this.physics.add.group();
     this.pickups = this.physics.add.group({ classType: Pickup, runChildUpdate: false });
 
     this.player = new Player(this, GAME_WIDTH / 2, GAME_HEIGHT - 80, this.character, this.laser);
@@ -208,14 +205,6 @@ export class GameScene extends Phaser.Scene {
       if (hit) audio.playerHit();
       this.killEnemy(enemy, hit ? undefined : "noscore");
       if (hit) this.checkGameOver();
-    });
-
-    this.physics.add.overlap(this.player, this.enemyLasers, (_playerObj, laserObj) => {
-      (laserObj as Phaser.Physics.Arcade.Image).destroy();
-      if (this.player.takeHit()) {
-        audio.playerHit();
-        this.checkGameOver();
-      }
     });
 
     this.physics.add.overlap(this.player, this.pickups, (_playerObj, pickupObj) => {
@@ -701,19 +690,7 @@ export class GameScene extends Phaser.Scene {
       const enemy = enemyObj as Enemy;
       if (enemy.y > GAME_HEIGHT + 40) {
         enemy.destroy();
-        continue;
       }
-      if (enemy.kind === "shooter" && enemy.y > 0 && enemy.y < GAME_HEIGHT) {
-        if (this.time.now > enemy.lastFiredAt + enemy.fireCooldownMs) {
-          enemy.lastFiredAt = this.time.now;
-          this.fireEnemyLaser(enemy);
-        }
-      }
-    }
-
-    for (const laserObj of this.enemyLasers.getChildren()) {
-      const laser = laserObj as Phaser.Physics.Arcade.Image;
-      if (laser.y > GAME_HEIGHT + 20 || laser.y < -20) laser.destroy();
     }
 
     for (const laserObj of this.playerLasers.getChildren()) {
@@ -737,13 +714,5 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.refreshHud();
-  }
-
-  private fireEnemyLaser(enemy: Enemy): void {
-    const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
-    const laser = this.enemyLasers.create(enemy.x, enemy.y + 10, "enemyLaser") as Phaser.Physics.Arcade.Image;
-    laser.setRotation(angle);
-    laser.setDepth(2);
-    this.physics.velocityFromRotation(angle, ENEMY_LASER_SPEED, laser.body!.velocity);
   }
 }

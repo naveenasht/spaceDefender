@@ -27,8 +27,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   scoreValue: number;
   driftPhase = Math.random() * Math.PI * 2;
   baseX: number;
-  lastFiredAt = 0;
-  fireCooldownMs: number;
   private speed: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number, kind: EnemyKind) {
@@ -36,7 +34,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.kind = kind;
     this.hp = HP_BY_KIND[kind];
     this.baseX = x;
-    this.fireCooldownMs = Phaser.Math.Between(1400, 2400);
     this.speed = SPEED_BY_KIND[kind];
 
     scene.add.existing(this);

@@ -9,8 +9,6 @@ export const PLAYER_INVULN_MS = 1500;
 export const LASER_SPEED = 650;
 export const PLAYER_FIRE_COOLDOWN_MS = 180;
 
-export const ENEMY_LASER_SPEED = 380;
-
 export const POWERUP_SLOTS = 4;
 export const SHIELD_DURATION_MS = 5000;
 export const AMMO_PACK_AMOUNT = 50;

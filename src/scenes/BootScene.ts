@@ -19,7 +19,6 @@ export class BootScene extends Phaser.Scene {
     this.makeEnemy("enemyExtra", 0xb84dff, 0xf0d9ff, 44);
 
     this.makeLaser("playerLaser", 0x7cf7ff, 0xffffff, 18, 4);
-    this.makeLaser("enemyLaser", 0xff5d5d, 0xffd6d6, 14, 4);
     this.makeLaser("laserSpread", 0xffcf5c, 0xfff0c9, 15, 4);
     this.makeLaser("laserPierce", 0xb84dff, 0xf0d9ff, 26, 5);
     this.makeLaser("laserTwin", 0x4da6ff, 0xd6ecff, 16, 4);
