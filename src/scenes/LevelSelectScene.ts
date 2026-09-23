@@ -7,11 +7,15 @@ const CARD_WIDTH = 200;
 const CARD_HEIGHT = 300;
 const CARD_GAP = 30;
 const CARD_TOP = 160;
+const WINDOW_SIZE = 3;
+const DIFFICULTY_MAX = 5;
 
 const DIFFICULTY_COLOR: Record<number, number> = {
   1: 0x4dffa0,
   2: 0xffcf5c,
   3: 0xff5d5d,
+  4: 0xff8a3d,
+  5: 0xb84dff,
 };
 
 interface LevelSelectData {
@@ -24,6 +28,9 @@ export class LevelSelectScene extends Phaser.Scene {
   private laserId!: string;
   private selectedIndex = 0;
   private panels: Phaser.GameObjects.Rectangle[] = [];
+  private panelLevelIndices: number[] = [];
+  private cardExtras: Phaser.GameObjects.GameObject[] = [];
+  private pagingText!: Phaser.GameObjects.Text;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: { A: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key };
   private keyEnter!: Phaser.Input.Keyboard.Key;
@@ -39,6 +46,7 @@ export class LevelSelectScene extends Phaser.Scene {
     this.laserId = data.laserId ?? LASERS[0].id;
     this.selectedIndex = 0;
     this.panels = [];
+    this.cardExtras = [];
     this.cameras.main.setBackgroundColor(0x05070d);
 
     for (let i = 0; i < 60; i++) {
@@ -75,13 +83,15 @@ export class LevelSelectScene extends Phaser.Scene {
         this.scene.start("Menu");
       });
 
-    const totalWidth = LEVELS.length * CARD_WIDTH + (LEVELS.length - 1) * CARD_GAP;
-    const startX = GAME_WIDTH / 2 - totalWidth / 2;
+    this.pagingText = this.add
+      .text(GAME_WIDTH / 2, CARD_TOP - 20, "", {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#6f88a3",
+      })
+      .setOrigin(0.5);
 
-    LEVELS.forEach((level, i) => {
-      const cx = startX + i * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2;
-      this.buildCard(level, i, cx);
-    });
+    this.buildCards();
 
     this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT - 34, "←/→ SELECT   ENTER OR CLICK TO CONFIRM   BACKSPACE: BACK", {
@@ -107,13 +117,44 @@ export class LevelSelectScene extends Phaser.Scene {
     this.cursors.right!.on("down", () => this.moveSelection(1));
     this.wasd.A.on("down", () => this.moveSelection(-1));
     this.wasd.D.on("down", () => this.moveSelection(1));
-
-    this.highlight();
   }
 
   private moveSelection(delta: number): void {
     this.selectedIndex = (this.selectedIndex + delta + LEVELS.length) % LEVELS.length;
     audio.uiMove();
+    this.buildCards();
+  }
+
+  /** Clamped so the window always shows WINDOW_SIZE cards when there are enough levels. */
+  private windowStart(): number {
+    const windowSize = Math.min(WINDOW_SIZE, LEVELS.length);
+    return Phaser.Math.Clamp(this.selectedIndex - 1, 0, Math.max(0, LEVELS.length - windowSize));
+  }
+
+  private buildCards(): void {
+    this.panels.forEach((panel) => panel.destroy());
+    this.panels = [];
+    this.panelLevelIndices = [];
+    this.cardExtras.forEach((obj) => obj.destroy());
+    this.cardExtras = [];
+
+    const windowSize = Math.min(WINDOW_SIZE, LEVELS.length);
+    const start = this.windowStart();
+    const visible = LEVELS.slice(start, start + windowSize);
+
+    const totalWidth = visible.length * CARD_WIDTH + (visible.length - 1) * CARD_GAP;
+    const startX = GAME_WIDTH / 2 - totalWidth / 2;
+
+    visible.forEach((level, vi) => {
+      const index = start + vi;
+      const cx = startX + vi * (CARD_WIDTH + CARD_GAP) + CARD_WIDTH / 2;
+      this.buildCard(level, index, cx);
+    });
+
+    this.pagingText.setText(
+      LEVELS.length > windowSize ? `SECTOR ${this.selectedIndex + 1} OF ${LEVELS.length}` : ""
+    );
+
     this.highlight();
   }
 
@@ -127,6 +168,7 @@ export class LevelSelectScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .setDepth(1);
     this.panels.push(panel);
+    this.panelLevelIndices.push(index);
 
     panel.on("pointerover", () => {
       this.selectedIndex = index;
@@ -137,45 +179,53 @@ export class LevelSelectScene extends Phaser.Scene {
       this.confirm();
     });
 
-    this.add
-      .text(cx, CARD_TOP + 34, level.name.toUpperCase(), {
-        fontFamily: "monospace",
-        fontSize: "15px",
-        color: "#e6f2fb",
-        fontStyle: "bold",
-        align: "center",
-        wordWrap: { width: CARD_WIDTH - 24 },
-      })
-      .setOrigin(0.5, 0)
-      .setDepth(2);
+    this.cardExtras.push(
+      this.add
+        .text(cx, CARD_TOP + 34, level.name.toUpperCase(), {
+          fontFamily: "monospace",
+          fontSize: "15px",
+          color: "#e6f2fb",
+          fontStyle: "bold",
+          align: "center",
+          wordWrap: { width: CARD_WIDTH - 24 },
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(2)
+    );
 
-    this.add
-      .text(cx, CARD_TOP + 70, level.tagline, {
-        fontFamily: "monospace",
-        fontSize: "11px",
-        color: "#9fb3c8",
-        align: "center",
-        wordWrap: { width: CARD_WIDTH - 24 },
-      })
-      .setOrigin(0.5, 0)
-      .setDepth(2);
+    this.cardExtras.push(
+      this.add
+        .text(cx, CARD_TOP + 70, level.tagline, {
+          fontFamily: "monospace",
+          fontSize: "11px",
+          color: "#9fb3c8",
+          align: "center",
+          wordWrap: { width: CARD_WIDTH - 24 },
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(2)
+    );
 
     const dotY = CARD_TOP + 115;
     const dotGap = 18;
-    const dotsStartX = cx - dotGap;
-    for (let d = 0; d < 3; d++) {
-      this.add
-        .circle(dotsStartX + d * dotGap, dotY, 6, d < level.difficulty ? accent : 0x1c2c42, 1)
-        .setDepth(2);
+    const dotsStartX = cx - (dotGap * (DIFFICULTY_MAX - 1)) / 2;
+    for (let d = 0; d < DIFFICULTY_MAX; d++) {
+      this.cardExtras.push(
+        this.add
+          .circle(dotsStartX + d * dotGap, dotY, 6, d < level.difficulty ? accent : 0x1c2c42, 1)
+          .setDepth(2)
+      );
     }
-    this.add
-      .text(cx, dotY + 20, "DIFFICULTY", {
-        fontFamily: "monospace",
-        fontSize: "9px",
-        color: "#6f88a3",
-      })
-      .setOrigin(0.5)
-      .setDepth(2);
+    this.cardExtras.push(
+      this.add
+        .text(cx, dotY + 20, "DIFFICULTY", {
+          fontFamily: "monospace",
+          fontSize: "9px",
+          color: "#6f88a3",
+        })
+        .setOrigin(0.5)
+        .setDepth(2)
+    );
 
     const infoY = CARD_TOP + 165;
     const rows = [
@@ -185,40 +235,46 @@ export class LevelSelectScene extends Phaser.Scene {
     ];
     rows.forEach(([label, value], row) => {
       const y = infoY + row * 22;
-      this.add
-        .text(cx - CARD_WIDTH / 2 + 16, y, label, {
-          fontFamily: "monospace",
-          fontSize: "10px",
-          color: "#6f88a3",
-        })
-        .setOrigin(0, 0.5)
-        .setDepth(2);
-      this.add
-        .text(cx + CARD_WIDTH / 2 - 16, y, value, {
-          fontFamily: "monospace",
-          fontSize: "10px",
-          color: "#c9d6e3",
-        })
-        .setOrigin(1, 0.5)
-        .setDepth(2);
+      this.cardExtras.push(
+        this.add
+          .text(cx - CARD_WIDTH / 2 + 16, y, label, {
+            fontFamily: "monospace",
+            fontSize: "10px",
+            color: "#6f88a3",
+          })
+          .setOrigin(0, 0.5)
+          .setDepth(2)
+      );
+      this.cardExtras.push(
+        this.add
+          .text(cx + CARD_WIDTH / 2 - 16, y, value, {
+            fontFamily: "monospace",
+            fontSize: "10px",
+            color: "#c9d6e3",
+          })
+          .setOrigin(1, 0.5)
+          .setDepth(2)
+      );
     });
 
     const best = getBestForLevel(level.id);
-    this.add
-      .text(cx, CARD_TOP + CARD_HEIGHT - 22, best > 0 ? `SECTOR BEST: ${best}` : "SECTOR BEST: —", {
-        fontFamily: "monospace",
-        fontSize: "11px",
-        color: "#ffcf5c",
-      })
-      .setOrigin(0.5)
-      .setDepth(2);
+    this.cardExtras.push(
+      this.add
+        .text(cx, CARD_TOP + CARD_HEIGHT - 22, best > 0 ? `SECTOR BEST: ${best}` : "SECTOR BEST: —", {
+          fontFamily: "monospace",
+          fontSize: "11px",
+          color: "#ffcf5c",
+        })
+        .setOrigin(0.5)
+        .setDepth(2)
+    );
   }
 
   private highlight(): void {
     this.panels.forEach((panel, i) => {
-      const level = LEVELS[i];
+      const level = LEVELS[this.panelLevelIndices[i]];
       const accent = DIFFICULTY_COLOR[level.difficulty];
-      if (i === this.selectedIndex) {
+      if (this.panelLevelIndices[i] === this.selectedIndex) {
         panel.setStrokeStyle(3, accent);
         panel.setFillStyle(0x0f1e33, 0.95);
         this.tweens.add({ targets: panel, scale: 1.04, duration: 120, ease: "Cubic.easeOut" });

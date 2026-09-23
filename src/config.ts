@@ -218,7 +218,7 @@ export interface LevelDef {
   id: string;
   name: string;
   tagline: string;
-  difficulty: 1 | 2 | 3;
+  difficulty: 1 | 2 | 3 | 4 | 5;
   enemySpawnMs: number;
   pickupSpawnMs: number;
   weights: EnemyWeights;
@@ -255,5 +255,25 @@ export const LEVELS: LevelDef[] = [
     pickupSpawnMs: 4600,
     weights: { enemy: 0.45, shooter: 0.35, extra: 0.2 },
     survivalTargetMs: 150_000,
+  },
+  {
+    id: "delta",
+    name: "Sector Delta",
+    tagline: "Behind enemy lines",
+    difficulty: 4,
+    enemySpawnMs: 500,
+    pickupSpawnMs: 5000,
+    weights: { enemy: 0.35, shooter: 0.4, extra: 0.25 },
+    survivalTargetMs: 180_000,
+  },
+  {
+    id: "epsilon",
+    name: "Sector Epsilon",
+    tagline: "The final gauntlet",
+    difficulty: 5,
+    enemySpawnMs: 400,
+    pickupSpawnMs: 5400,
+    weights: { enemy: 0.25, shooter: 0.4, extra: 0.35 },
+    survivalTargetMs: 210_000,
   },
 ];
