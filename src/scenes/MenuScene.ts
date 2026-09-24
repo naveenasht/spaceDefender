@@ -28,7 +28,7 @@ export class MenuScene extends Phaser.Scene {
     }
 
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.19, "SPACE DEFENDER", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.19, "SPACE ATTACKER", {
         fontFamily: "monospace",
         fontSize: "40px",
         color: "#7cf7ff",

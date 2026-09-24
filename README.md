@@ -1,4 +1,4 @@
-# Space Defender
+# Space Attacker
 
 A browser-based top-down space shooter built with [Phaser](https://phaser.io/) 4 + TypeScript + Vite. No external art/audio assets — every sprite is generated procedurally at boot time.
 
